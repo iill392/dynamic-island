@@ -32,6 +32,11 @@
             android:exported="false"
             android:launchMode="singleTop" />
 
+        <activity
+            android:name=".SettingsCategoryActivity"
+            android:exported="false"
+            android:launchMode="singleTop" />
+
         <service
             android:name=".IslandService"
             android:exported="false"

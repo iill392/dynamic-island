@@ -35,6 +35,9 @@ public class MainActivity extends Activity {
     private android.widget.Switch masterSwitch;
     private android.widget.Switch liquidSwitch;
     private TextView topPermissionText;
+    private TextView permissionRowSub;
+    private TextView headerStatus;
+    private TextView headerPlay;
     private boolean updatingTopSwitches;
 
     @Override protected void onCreate(Bundle savedInstanceState) {
@@ -68,203 +71,222 @@ public class MainActivity extends Activity {
 
     private View buildUi() {
         ScrollView scroll = new ScrollView(this);
-        scroll.setBackgroundColor(0xFFFFFFFF);
+        scroll.setBackgroundColor(0xFFF7F8FA);
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        int pad = dp(20);
-        root.setPadding(pad, dp(36), pad, dp(36));
-        scroll.addView(root, new ViewGroup.LayoutParams(
+
+        // ---- Blue header like dynamicSpot Pro ----
+        LinearLayout header = new LinearLayout(this);
+        header.setOrientation(LinearLayout.VERTICAL);
+        header.setBackgroundColor(0xFF0B7FA8);
+        header.setPadding(dp(22), dp(26), dp(22), dp(24));
+        root.addView(header, new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        LinearLayout headerTop = new LinearLayout(this);
+        headerTop.setOrientation(LinearLayout.HORIZONTAL);
+        headerTop.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        header.addView(headerTop);
+
+        LinearLayout headerTexts = new LinearLayout(this);
+        headerTexts.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams htlp = new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        headerTop.addView(headerTexts, htlp);
 
         TextView title = new TextView(this);
         title.setText("游龙灵动岛");
-        title.setTextSize(30);
-        title.setTextColor(0xFF111114);
-        title.setTypeface(android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.BOLD));
-        root.addView(title);
+        title.setTextSize(32);
+        title.setTextColor(0xFFFFFFFF);
+        title.setTypeface(android.graphics.Typeface.create(
+                "sans-serif-medium", android.graphics.Typeface.BOLD));
+        headerTexts.addView(title);
 
-        TextView sub = new TextView(this);
-        sub.setText("bata【严禁外传】 · 充电 / 音乐 / 通知");
-        sub.setTextSize(13);
-        sub.setTextColor(0xFF6B6B75);
-        sub.setPadding(0, dp(6), 0, dp(18));
-        root.addView(sub);
+        headerStatus = new TextView(this);
+        headerStatus.setTextSize(13);
+        headerStatus.setTextColor(0xCCFFFFFF);
+        headerStatus.setPadding(0, dp(6), 0, 0);
+        headerTexts.addView(headerStatus);
 
-        statusView = new TextView(this);
-        statusView.setTextSize(13);
-        statusView.setTextColor(0xFF33333A);
-        statusView.setLineSpacing(dp(4), 1f);
-        root.addView(statusView);
+        headerPlay = new TextView(this);
+        headerPlay.setText("▶");
+        headerPlay.setTextSize(24);
+        headerPlay.setTextColor(0xFFFFFFFF);
+        headerPlay.setGravity(android.view.Gravity.CENTER);
+        GradientDrawable playBg = new GradientDrawable();
+        playBg.setColor(0x33FFFFFF);
+        playBg.setShape(GradientDrawable.OVAL);
+        headerPlay.setBackground(playBg);
+        headerPlay.setLayoutParams(new LinearLayout.LayoutParams(dp(52), dp(52)));
+        headerPlay.setOnClickListener(v -> toggleMasterFromHeader());
+        headerTop.addView(headerPlay);
 
-        root.addView(categoryTitle("灵动岛开关"));
-        buildTopSwitchRow(root);
+        // ---- Menu rows ----
+        LinearLayout menu = new LinearLayout(this);
+        menu.setOrientation(LinearLayout.VERTICAL);
+        menu.setPadding(dp(18), dp(6), dp(18), dp(24));
+        root.addView(menu);
 
-        root.addView(categoryTitle("外观设置"));
+        LinearLayout masterRow = addMenuRow(menu, "灵动岛", "通知 / 充电 / 音量 / 解锁",
+                0xFF26A69A, R.drawable.ic_menu_notif, true, null);
+        masterSwitch = (android.widget.Switch) masterRow.getChildAt(2);
+        masterSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (updatingTopSwitches) return;
+            setMasterEnabled(isChecked);
+        });
 
-        root.addView(sectionLabel("位置微调（如果岛没有压在状态栏上，拖动这里）"));        TextView offsetLabel = new TextView(this);
-        offsetLabel.setTextSize(12);
-        offsetLabel.setTextColor(0xFF6B6B75);
-        root.addView(offsetLabel);
-        android.widget.SeekBar seek = new android.widget.SeekBar(this);
-        seek.setMax(80);
-        int saved = Math.round(prefs.getFloat("offset_dp", 0f));
-        seek.setProgress(Math.max(0, Math.min(80, saved + 40)));
-        offsetLabel.setText("垂直偏移：" + saved + " dp（负数=更靠上，0=压在状态栏正中）");
-        seek.setOnSeekBarChangeListener(new android.widget.SeekBar.OnSeekBarChangeListener() {
-            @Override public void onProgressChanged(android.widget.SeekBar sb, int progress, boolean fromUser) {
-                int v = progress - 40;
-                offsetLabel.setText("垂直偏移：" + v + " dp（负数=更靠上，0=压在状态栏正中）");
+        addMenuRow(menu, "通用", "显示设置和互动",
+                0xFFC0A020, R.drawable.ic_menu_general, false,
+                () -> openCategory(SettingsCategoryActivity.CATEGORY_GENERAL));
+        addMenuRow(menu, "外观", "尺寸、圆角和样式",
+                0xFF43A047, R.drawable.ic_menu_appearance, false,
+                () -> openCategory(SettingsCategoryActivity.CATEGORY_APPEARANCE));
+        addMenuRow(menu, "位置", "更改大小和位置",
+                0xFF4CAF50, R.drawable.ic_menu_position, false,
+                () -> openCategory(SettingsCategoryActivity.CATEGORY_POSITION));
+
+        LinearLayout permRow = addMenuRow(menu, "权限", "点击逐项授权",
+                0xFF3F51B5, R.drawable.ic_menu_permission, false,
+                () -> startActivity(new Intent(this, PermissionActivity.class)));
+        // subtitle TextView is child 1 of the text column which is child 1 of the row
+        permissionRowSub = (TextView) ((LinearLayout) permRow.getChildAt(1)).getChildAt(1);
+
+        LinearLayout liquidRow = addMenuRow(menu, "液态玻璃", "独立液态玻璃灵动岛",
+                0xFF7E57C2, R.drawable.ic_menu_liquid, true, null);
+        liquidSwitch = (android.widget.Switch) liquidRow.getChildAt(2);
+        liquidSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (updatingTopSwitches) return;
+            prefs.edit().putBoolean("use_liquid", isChecked).apply();
+            if (prefs.getBoolean("enabled", false) && IslandService.isRunning()) {
+                stopIslandServices();
+                startSelectedService();
             }
-            @Override public void onStartTrackingTouch(android.widget.SeekBar sb) {}
-            @Override public void onStopTrackingTouch(android.widget.SeekBar sb) {
-                int v = sb.getProgress() - 40;
-                prefs.edit().putFloat("offset_dp", v).apply();
-                // Only nudge a running service; starting a foreground service just to apply an
-                // offset would leave an idle service behind.
-                if (IslandService.isRunning()) {
-                    IslandService.start(MainActivity.this, IslandService.ACTION_REFRESH);
-                }
-            }
-        });
-        root.addView(seek, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(44)));
-
-        root.addView(sectionLabel("灵动岛尺寸（自定义）"));
-        addPercentSlider(root, "整体缩放", "geom_scale", 100, 70, 130);
-        addPercentSlider(root, "紧凑胶囊宽", "geom_compact_w", 100, 80, 130);
-        addPercentSlider(root, "紧凑胶囊高", "geom_compact_h", 100, 80, 130);
-        addPercentSlider(root, "展开卡宽", "geom_expanded_w", 100, 85, 115);
-        addPercentSlider(root, "展开卡高", "geom_expanded_h", 100, 80, 130);
-        addPercentSlider(root, "展开卡圆角", "geom_radius", 100, 70, 130);
-        addPercentSlider(root, "常驻胶囊宽", "geom_idle_w", 100, 60, 200);
-        addPercentSlider(root, "常驻胶囊高", "geom_idle_h", 100, 60, 160);
-        Button resetGeom = new Button(this);
-        resetGeom.setText("恢复默认尺寸");
-        resetGeom.setAllCaps(false);
-        resetGeom.setTextSize(14);
-        resetGeom.setTextColor(0xFF33333A);
-        GradientDrawable rbg = new GradientDrawable();
-        rbg.setColor(0xFFF4F5F8);
-        rbg.setCornerRadius(dp(12));
-        rbg.setStroke(dp(1), 0xFFDADBE3);
-        resetGeom.setBackground(rbg);
-        LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(44));
-        rlp.bottomMargin = dp(4);
-        resetGeom.setLayoutParams(rlp);
-        resetGeom.setOnClickListener(v -> {
-            prefs.edit()
-                    .putInt("geom_scale", 100)
-                    .putInt("geom_compact_w", 100)
-                    .putInt("geom_compact_h", 100)
-                    .putInt("geom_expanded_w", 100)
-                    .putInt("geom_expanded_h", 100)
-                    .putInt("geom_radius", 100)
-                    .putInt("geom_idle_w", 100)
-                    .putInt("geom_idle_h", 100)
-                    .apply();
-            toastText("已恢复默认尺寸，重新打开页面查看滑块");
-            refreshGeometryService();
-        });
-        root.addView(resetGeom);
-
-        root.addView(categoryTitle("显示设置"));
-        root.addView(sectionLabel("灵动岛常驻"));        android.widget.CheckBox alwaysOn = new android.widget.CheckBox(this);
-        alwaysOn.setText("常驻显示：没有计时/音乐/通知时也保留小胶囊");
-        alwaysOn.setTextSize(14);
-        alwaysOn.setTextColor(0xFF1F1F24);
-        alwaysOn.setChecked(prefs.getBoolean("always_on", false));
-        alwaysOn.setPadding(0, dp(4), 0, dp(8));
-        alwaysOn.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            prefs.edit().putBoolean("always_on", isChecked).apply();
-            refreshGeometryService();
-        });
-        root.addView(alwaysOn);
-
-        // v8.56: independent per-scenario switches.
-        root.addView(sectionLabel("灵动岛显示开关（单独控制）"));
-        addVisibilityToggle(root, "来消息时显示灵动岛", "show_notif", true);
-        addVisibilityToggle(root, "充电时显示灵动岛", "show_charge", true);
-        addVisibilityToggle(root, "调音量时显示灵动岛", "show_volume", true);
-        addVisibilityToggle(root, "播放音乐时显示灵动岛", "show_music", true);
-        addVisibilityToggle(root, "响铃/静音时显示灵动岛", "show_ringer", true);
-        addVisibilityToggle(root, "解锁时显示解锁动画", "show_unlock", true);
-        addVisibilityToggle(root, "锁屏时显示锁头胶囊", "show_lock", true);
-
-        root.addView(sectionLabel("通知灵动岛应用"));
-        addButton(root, "选择显示通知的应用（只显示勾选的）",
-                v -> showNotificationAppPicker());
-        addButton(root, "恢复显示全部应用通知", v -> {
-            prefs.edit().remove("notif_apps").apply();
-            refreshGeometryService();
-            toastText("已恢复：所有应用的通知都会显示");
-        });
-
-        root.addView(categoryTitle("权限与授权"));
-        addButton(root, "打开权限授权页（悬浮窗 / 通知使用权 / 通知 / 无障碍）",
-                v -> startActivity(new Intent(this, PermissionActivity.class)));
-        addButton(root, "授予悬浮窗权限", v -> openOverlaySettings());
-        addButton(root, "授予通知使用权（通知 / 计时器 / 音乐）", v ->
-                openSettings("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"));
-        addButton(root, "增强模式：让灵动岛显示在状态栏上方（无障碍）", v ->
-                openSettings("android.settings.ACCESSIBILITY_SETTINGS"));
-
-        root.addView(categoryTitle("服务与调试"));
-        addButton(root, "开启灵动岛", v -> {
-            if (!hasRequiredPermissions()) {
-                toastText("请先在权限页逐项授权，返回后再开启灵动岛");
-                startActivity(new Intent(this, PermissionActivity.class));
-                return;
-            }
-            prefs.edit().putBoolean("enabled", true).apply();
-            stopIslandServices();
-            startSelectedService();
             refresh();
         });
-        addButton(root, "关闭灵动岛", v -> {
+
+        TextView footer = new TextView(this);
+        footer.setText("bata【严禁外传】\n开启前请先在「权限」中逐项授权。");
+        footer.setTextSize(12);
+        footer.setTextColor(0xFF8A8A93);
+        footer.setPadding(dp(18), dp(2), dp(18), dp(26));
+        root.addView(footer);
+
+        scroll.addView(root, new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        return scroll;
+    }
+
+    private void openCategory(String category) {
+        Intent i = new Intent(this, SettingsCategoryActivity.class);
+        i.putExtra(SettingsCategoryActivity.EXTRA_CATEGORY, category);
+        startActivity(i);
+    }
+
+    /**
+     * v8.63: one dynamicSpot-style menu row: round coloured icon, title/subtitle and either a
+     * Switch or a chevron. Returns the row so callers can grab the switch.
+     */
+    private LinearLayout addMenuRow(LinearLayout parent, String titleText, String subText,
+                                    int color, int iconRes, boolean withSwitch, Runnable click) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        row.setPadding(0, dp(18), dp(4), dp(18));
+        row.setBackgroundColor(0xFFFFFFFF);
+
+        android.widget.ImageView icon = new android.widget.ImageView(this);
+        GradientDrawable circle = new GradientDrawable();
+        circle.setShape(GradientDrawable.OVAL);
+        circle.setColor(color);
+        icon.setBackground(circle);
+        icon.setImageResource(iconRes);
+        icon.setColorFilter(0xFFFFFFFF);
+        icon.setScaleType(android.widget.ImageView.ScaleType.CENTER_INSIDE);
+        int iconBox = dp(64);
+        LinearLayout.LayoutParams ilp = new LinearLayout.LayoutParams(iconBox, iconBox);
+        ilp.rightMargin = dp(20);
+        icon.setPadding(dp(15), dp(15), dp(15), dp(15));
+        row.addView(icon, ilp);
+
+        LinearLayout texts = new LinearLayout(this);
+        texts.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        row.addView(texts, tlp);
+
+        TextView title = new TextView(this);
+        title.setText(titleText);
+        title.setTextSize(22);
+        title.setTextColor(0xFF1A1A1F);
+        title.setTypeface(android.graphics.Typeface.create(
+                "sans-serif", android.graphics.Typeface.NORMAL));
+        texts.addView(title);
+
+        TextView sub = new TextView(this);
+        sub.setText(subText);
+        sub.setTextSize(15);
+        sub.setTextColor(0xFF7A7A84);
+        sub.setPadding(0, dp(3), 0, 0);
+        texts.addView(sub);
+
+        if (withSwitch) {
+            android.widget.Switch sw = new android.widget.Switch(this);
+            sw.setShowText(false);
+            row.addView(sw);
+        } else {
+            TextView chevron = new TextView(this);
+            chevron.setText("›");
+            chevron.setTextSize(30);
+            chevron.setTextColor(0xFFB0B0B8);
+            chevron.setGravity(android.view.Gravity.CENTER);
+            chevron.setPadding(dp(10), 0, dp(8), 0);
+            row.addView(chevron);
+        }
+
+        if (click != null) row.setOnClickListener(v -> click.run());
+        parent.addView(row, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        View divider = new View(this);
+        divider.setBackgroundColor(0xFFEDEEF2);
+        LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(1));
+        dlp.leftMargin = dp(84);
+        parent.addView(divider, dlp);
+        return row;
+    }
+
+    private void toggleMasterFromHeader() {
+        boolean on = prefs.getBoolean("enabled", false) || IslandService.isLiquidRunning();
+        if (on) {
+            setMasterEnabled(false);
+        } else if (!hasRequiredPermissions()) {
+            toastText("请先在权限页逐项授权，返回后再开启灵动岛");
+            startActivity(new Intent(this, PermissionActivity.class));
+        } else {
+            setMasterEnabled(true);
+        }
+    }
+
+    private void setMasterEnabled(boolean on) {
+        if (!on) {
             prefs.edit().putBoolean("enabled", false).apply();
             stopIslandServices();
             refresh();
-        });
-        // v8.45: independent Liquid-Glass island module (separate Activity/library module).
-        addButton(root, "使用液态玻璃灵动岛", v -> {
-            if (!hasRequiredPermissions()) {
-                toastText("请先在权限页逐项授权，返回后再开启灵动岛");
-                startActivity(new Intent(this, PermissionActivity.class));
-                return;
-            }
-            Intent liquid = new Intent();
-            liquid.setClassName(this, "com.lingdong.island.liquidglass.LiquidGlassActivity");
-            try {
-                startActivity(liquid);
-            } catch (Throwable t) {
-                toastText("液态玻璃模块未安装：" + t.getMessage());
-            }
-        });
-
-        root.addView(sectionLabel("预览效果"));
-        addButton(root, "充电动效", v -> {
-            if (ensureService()) IslandService.start(this, IslandService.ACTION_DEMO_CHARGE);
-        });
-        addButton(root, "音乐播放", v -> {
-            if (ensureService()) IslandService.start(this, IslandService.ACTION_DEMO_MUSIC);
-        });
-        addButton(root, "结束预览", v -> {
-            if (IslandService.isRunning()) IslandService.start(this, IslandService.ACTION_DEMO_HIDE);
-        });
-
-        TextView tip = new TextView(this);
-        tip.setText("提示：灵动岛会显示在屏幕顶部状态栏区域。任意 App 来通知时会弹出通知胶囊（应用图标 + 标题），"
-                + "点击可展开详情与操作按钮，点岛外或上滑收起；可点击计时器/音乐胶囊展开控制卡片。"
-                + "真实场景下，插上充电器会触发充电动效（显示真实电量）；系统时钟的秒表/计时器运行时会出现计时胶囊；"
-                + "任意音乐 App 播放时会出现专辑封面 + 波形。");
-        tip.setTextSize(12);
-        tip.setTextColor(0xFF777780);
-        tip.setLineSpacing(dp(4), 1f);
-        tip.setPadding(0, dp(22), 0, 0);
-        root.addView(tip);
-
-        return scroll;
+            return;
+        }
+        if (!hasRequiredPermissions()) {
+            updatingTopSwitches = true;
+            if (masterSwitch != null) masterSwitch.setChecked(false);
+            updatingTopSwitches = false;
+            toastText("请先在权限页逐项授权，返回后再开启灵动岛");
+            startActivity(new Intent(this, PermissionActivity.class));
+            return;
+        }
+        prefs.edit().putBoolean("enabled", true).apply();
+        stopIslandServices();
+        startSelectedService();
+        refresh();
     }
 
     private boolean ensureService() {
@@ -660,11 +682,13 @@ public class MainActivity extends Activity {
         boolean notif = isNotificationAccessEnabled();
         boolean running = IslandService.isRunning();
         boolean a11y = isAccessibilityAccessEnabled();
-        statusView.setText("悬浮窗权限：" + (overlay ? "已授予" : "未授予")
-                + "\n通知使用权：" + (notif ? "已授予" : "未授予（计时器/音乐需要）")
-                + "\n无障碍增强：" + (a11y ? "已开启（岛显示在状态栏上方）" : "未开启（可选）")
-                + "\n灵动岛服务：" + (running ? "运行中" : "未运行"));
-        statusView.setTextColor((overlay || a11y) && running ? 0xFF2E9E5B : 0xFF33333A);
+        if (statusView != null) {
+            statusView.setText("悬浮窗权限：" + (overlay ? "已授予" : "未授予")
+                    + "\n通知使用权：" + (notif ? "已授予" : "未授予（计时器/音乐需要）")
+                    + "\n无障碍增强：" + (a11y ? "已开启（岛显示在状态栏上方）" : "未开启（可选）")
+                    + "\n灵动岛服务：" + (running ? "运行中" : "未运行"));
+            statusView.setTextColor((overlay || a11y) && running ? 0xFF2E9E5B : 0xFF33333A);
+        }
         if (masterSwitch != null) {
             updatingTopSwitches = true;
             masterSwitch.setChecked(prefs.getBoolean("enabled", false)
@@ -676,6 +700,23 @@ public class MainActivity extends Activity {
             updatingTopSwitches = false;
         }
         updateTopPermissionState();
+        if (headerStatus != null) {
+            headerStatus.setText("bata【严禁外传】 · " + (running ? "运行中" : "未运行"));
+        }
+        if (headerPlay != null) {
+            headerPlay.setText(running ? "■" : "▶");
+        }
+        if (permissionRowSub != null) {
+            int done = 0;
+            if (overlay || a11y) done++;
+            if (notif) done++;
+            if (Build.VERSION.SDK_INT < 33
+                    || checkSelfPermission("android.permission.POST_NOTIFICATIONS")
+                            == PackageManager.PERMISSION_GRANTED) done++;
+            permissionRowSub.setText(done + "/3 已授权"
+                    + (done >= 3 ? " · 已完成" : " · 点击逐项授权"));
+            permissionRowSub.setTextColor(done >= 3 ? 0xFF2E9E5B : 0xFF7A7A84);
+        }
     }
 
     private boolean isAccessibilityAccessEnabled() {
