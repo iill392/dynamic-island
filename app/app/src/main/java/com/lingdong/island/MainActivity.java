@@ -32,6 +32,10 @@ public class MainActivity extends Activity {
     private static final int REQ_NOTIF = 10;
     private TextView statusView;
     private SharedPreferences prefs;
+    private android.widget.Switch masterSwitch;
+    private android.widget.Switch liquidSwitch;
+    private TextView topPermissionText;
+    private boolean updatingTopSwitches;
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -58,7 +62,7 @@ public class MainActivity extends Activity {
         super.onResume();
         refresh();
         if (IslandService.isRunning()) {
-            IslandService.start(this, IslandService.ACTION_REFRESH);
+            refreshGeometryService();
         }
     }
 
@@ -92,15 +96,12 @@ public class MainActivity extends Activity {
         statusView.setLineSpacing(dp(4), 1f);
         root.addView(statusView);
 
-        root.addView(sectionLabel("权限"));
-        addButton(root, "授予悬浮窗权限", v -> openOverlaySettings());
-        addButton(root, "授予通知使用权（通知 / 计时器 / 音乐）", v ->
-                openSettings("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"));
-        addButton(root, "增强模式：让灵动岛显示在状态栏上方（无障碍）", v ->
-                openSettings("android.settings.ACCESSIBILITY_SETTINGS"));
+        root.addView(categoryTitle("灵动岛开关"));
+        buildTopSwitchRow(root);
 
-        root.addView(sectionLabel("位置微调（如果岛没有压在状态栏上，拖动这里）"));
-        TextView offsetLabel = new TextView(this);
+        root.addView(categoryTitle("外观设置"));
+
+        root.addView(sectionLabel("位置微调（如果岛没有压在状态栏上，拖动这里）"));        TextView offsetLabel = new TextView(this);
         offsetLabel.setTextSize(12);
         offsetLabel.setTextColor(0xFF6B6B75);
         root.addView(offsetLabel);
@@ -167,8 +168,8 @@ public class MainActivity extends Activity {
         });
         root.addView(resetGeom);
 
-        root.addView(sectionLabel("灵动岛常驻"));
-        android.widget.CheckBox alwaysOn = new android.widget.CheckBox(this);
+        root.addView(categoryTitle("显示设置"));
+        root.addView(sectionLabel("灵动岛常驻"));        android.widget.CheckBox alwaysOn = new android.widget.CheckBox(this);
         alwaysOn.setText("常驻显示：没有计时/音乐/通知时也保留小胶囊");
         alwaysOn.setTextSize(14);
         alwaysOn.setTextColor(0xFF1F1F24);
@@ -199,24 +200,39 @@ public class MainActivity extends Activity {
             toastText("已恢复：所有应用的通知都会显示");
         });
 
-        root.addView(sectionLabel("服务"));
+        root.addView(categoryTitle("权限与授权"));
+        addButton(root, "打开权限授权页（悬浮窗 / 通知使用权 / 通知 / 无障碍）",
+                v -> startActivity(new Intent(this, PermissionActivity.class)));
+        addButton(root, "授予悬浮窗权限", v -> openOverlaySettings());
+        addButton(root, "授予通知使用权（通知 / 计时器 / 音乐）", v ->
+                openSettings("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"));
+        addButton(root, "增强模式：让灵动岛显示在状态栏上方（无障碍）", v ->
+                openSettings("android.settings.ACCESSIBILITY_SETTINGS"));
+
+        root.addView(categoryTitle("服务与调试"));
         addButton(root, "开启灵动岛", v -> {
-            if (!canShowIsland()) {
-                toastText("请先授予悬浮窗权限，或开启「增强模式（无障碍）」");
+            if (!hasRequiredPermissions()) {
+                toastText("请先在权限页逐项授权，返回后再开启灵动岛");
+                startActivity(new Intent(this, PermissionActivity.class));
                 return;
             }
             prefs.edit().putBoolean("enabled", true).apply();
-            IslandService.start(this, null);
+            stopIslandServices();
+            startSelectedService();
             refresh();
         });
         addButton(root, "关闭灵动岛", v -> {
             prefs.edit().putBoolean("enabled", false).apply();
-            stopService(new Intent(this, IslandService.class));
-            try { stopService(new Intent(this, LiquidIslandService.class)); } catch (Throwable ignored) {}
+            stopIslandServices();
             refresh();
         });
         // v8.45: independent Liquid-Glass island module (separate Activity/library module).
         addButton(root, "使用液态玻璃灵动岛", v -> {
+            if (!hasRequiredPermissions()) {
+                toastText("请先在权限页逐项授权，返回后再开启灵动岛");
+                startActivity(new Intent(this, PermissionActivity.class));
+                return;
+            }
             Intent liquid = new Intent();
             liquid.setClassName(this, "com.lingdong.island.liquidglass.LiquidGlassActivity");
             try {
@@ -269,6 +285,152 @@ public class MainActivity extends Activity {
      */
     private boolean canShowIsland() {
         return Settings.canDrawOverlays(this) || isAccessibilityAccessEnabled();
+    }
+
+    /** v8.62: top category — three side-by-side cards (island / liquid glass / permissions). */
+    private void buildTopSwitchRow(LinearLayout root) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setPadding(0, dp(2), 0, dp(8));
+        root.addView(row);
+
+        masterSwitch = addTopSwitchCard(row, "开启灵动岛");
+        masterSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (updatingTopSwitches) return;
+            if (!isChecked) {
+                prefs.edit().putBoolean("enabled", false).apply();
+                stopIslandServices();
+                refresh();
+                return;
+            }
+            if (!hasRequiredPermissions()) {
+                updatingTopSwitches = true;
+                buttonView.setChecked(false);
+                updatingTopSwitches = false;
+                toastText("请先在权限页逐项授权，返回后再开启灵动岛");
+                startActivity(new Intent(this, PermissionActivity.class));
+                return;
+            }
+            prefs.edit().putBoolean("enabled", true).apply();
+            stopIslandServices();
+            startSelectedService();
+            refresh();
+        });
+
+        liquidSwitch = addTopSwitchCard(row, "液态玻璃");
+        liquidSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (updatingTopSwitches) return;
+            prefs.edit().putBoolean("use_liquid", isChecked).apply();
+            if (prefs.getBoolean("enabled", false) && IslandService.isRunning()) {
+                stopIslandServices();
+                startSelectedService();
+            }
+            refresh();
+        });
+
+        // The third card is the permission entry; not a preference switch.
+        LinearLayout permCard = new LinearLayout(this);
+        permCard.setOrientation(LinearLayout.VERTICAL);
+        permCard.setGravity(android.view.Gravity.CENTER);
+        permCard.setBackground(roundedBg(0xFFF0F6FF, 16, 0xFFCFE0FF));
+        permCard.setPadding(dp(8), dp(10), dp(8), dp(10));
+        LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(0, dp(96), 1f);
+        plp.setMargins(dp(4), 0, dp(0), 0);
+        permCard.setLayoutParams(plp);
+        TextView permTitle = new TextView(this);
+        permTitle.setText("权限");
+        permTitle.setTextSize(14);
+        permTitle.setTextColor(0xFF1F1F24);
+        permTitle.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        permTitle.setGravity(android.view.Gravity.CENTER);
+        permCard.addView(permTitle);
+        topPermissionText = new TextView(this);
+        topPermissionText.setTextSize(11);
+        topPermissionText.setTextColor(0xFF2563EB);
+        topPermissionText.setGravity(android.view.Gravity.CENTER);
+        topPermissionText.setPadding(0, dp(6), 0, 0);
+        permCard.addView(topPermissionText);
+        permCard.setOnClickListener(v -> startActivity(new Intent(this, PermissionActivity.class)));
+        row.addView(permCard);
+    }
+
+    private android.widget.Switch addTopSwitchCard(LinearLayout row, String title) {
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setGravity(android.view.Gravity.CENTER);
+        card.setBackground(roundedBg(0xFFF7F7FA, 16, 0xFFE1E2E8));
+        card.setPadding(dp(8), dp(10), dp(8), dp(10));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(96), 1f);
+        lp.setMargins(0, 0, dp(8), 0);
+        card.setLayoutParams(lp);
+
+        TextView label = new TextView(this);
+        label.setText(title);
+        label.setTextSize(13);
+        label.setTextColor(0xFF1F1F24);
+        label.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        label.setGravity(android.view.Gravity.CENTER);
+        card.addView(label);
+        android.widget.Switch sw = new android.widget.Switch(this);
+        sw.setShowText(false);
+        sw.setPadding(0, dp(6), 0, 0);
+        card.addView(sw);
+        row.addView(card);
+        return sw;
+    }
+
+    private GradientDrawable roundedBg(int fill, int radiusDp, int stroke) {
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(fill);
+        bg.setCornerRadius(dp(radiusDp));
+        if (stroke != 0) bg.setStroke(dp(1), stroke);
+        return bg;
+    }
+
+    /** v8.62: required before the master switch may be turned on. */
+    private boolean hasRequiredPermissions() {
+        boolean base = Settings.canDrawOverlays(this) || isAccessibilityAccessEnabled();
+        boolean notif = isNotificationAccessEnabled();
+        boolean runtime = Build.VERSION.SDK_INT < 33
+                || checkSelfPermission("android.permission.POST_NOTIFICATIONS")
+                        == PackageManager.PERMISSION_GRANTED;
+        return base && notif && runtime;
+    }
+
+    private void stopIslandServices() {
+        stopService(new Intent(this, IslandService.class));
+        try { stopService(new Intent(this, LiquidIslandService.class)); } catch (Throwable ignored) {}
+    }
+
+    private void startSelectedService() {
+        if (prefs.getBoolean("use_liquid", false)) {
+            LiquidIslandService.start(this);
+        } else {
+            IslandService.start(this, null);
+        }
+    }
+
+    private void updateTopPermissionState() {
+        if (topPermissionText == null) return;
+        int done = 0;
+        if (Settings.canDrawOverlays(this) || isAccessibilityAccessEnabled()) done++;
+        if (isNotificationAccessEnabled()) done++;
+        if (Build.VERSION.SDK_INT < 33
+                || checkSelfPermission("android.permission.POST_NOTIFICATIONS")
+                        == PackageManager.PERMISSION_GRANTED) done++;
+        topPermissionText.setText(done + "/3\n点击授权");
+        topPermissionText.setTextColor(done >= 3 ? 0xFF2E9E5B : 0xFF2563EB);
+    }
+
+    private TextView categoryTitle(String text) {
+        TextView tv = new TextView(this);
+        tv.setText(text);
+        tv.setTextSize(19);
+        tv.setTextColor(0xFF111114);
+        tv.setTypeface(android.graphics.Typeface.create(
+                "sans-serif-medium", android.graphics.Typeface.BOLD));
+        tv.setPadding(0, dp(26), 0, dp(10));
+        return tv;
     }
 
     private TextView sectionLabel(String text) {
@@ -503,6 +665,17 @@ public class MainActivity extends Activity {
                 + "\n无障碍增强：" + (a11y ? "已开启（岛显示在状态栏上方）" : "未开启（可选）")
                 + "\n灵动岛服务：" + (running ? "运行中" : "未运行"));
         statusView.setTextColor((overlay || a11y) && running ? 0xFF2E9E5B : 0xFF33333A);
+        if (masterSwitch != null) {
+            updatingTopSwitches = true;
+            masterSwitch.setChecked(prefs.getBoolean("enabled", false)
+                    || IslandService.isLiquidRunning());
+            if (liquidSwitch != null) {
+                liquidSwitch.setChecked(prefs.getBoolean("use_liquid", false)
+                        || IslandService.isLiquidRunning());
+            }
+            updatingTopSwitches = false;
+        }
+        updateTopPermissionState();
     }
 
     private boolean isAccessibilityAccessEnabled() {

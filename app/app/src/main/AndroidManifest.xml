@@ -27,6 +27,11 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".PermissionActivity"
+            android:exported="false"
+            android:launchMode="singleTop" />
+
         <service
             android:name=".IslandService"
             android:exported="false"
