@@ -78,6 +78,23 @@ adb install -r E:\voice\dist\灵动岛-debug.apk
 3. **窗口尺寸小优化**：展开态悬浮窗宽度由 1.156 屏宽钳制到 1 屏宽（卡片 0.98W 仍完整可见，超屏过冲本来就被屏幕裁掉），减少无谓的 surface 与触摸区域。
 4. **版本**：versionCode 5 / versionName 3.2（`dist/灵动岛-debug.apk`）。
 
+## v8.64 更新（横屏摄像头跟随模式，2026-10-30）
+
+位置页新增「横屏位置模式」两个选项：
+
+1. **居中（默认）**：灵动岛始终在屏幕顶部中间；
+2. **跟随摄像头**：横屏时读取屏幕 DisplayCutout，把灵动岛水平对齐到刘海/挖孔摄像头下方，并做屏幕边缘夹紧；竖屏仍保持居中。
+
+实现：
+
+- `IslandService.applyWindowPlacement()`：仅在横屏 + 开启跟随 + API29+ 有 cutout 时生效；
+- 取面积最大的 cutout rect，水平中心对齐，`lp.x` 偏移；垂直放到 cutout.bottom 下方；
+- 卡片宽度用 `IslandView.getCardWidth()` 夹紧，避免跑出屏幕；
+- `cameraFollowWindowY` 参与原有位置校正，避免 ROM 顶栏补偿把岛拉回顶部；
+- 旋转屏幕时现有 `onConfigurationChanged` 重建窗口并重新应用；
+- 切换模式通过 ACTION_REFRESH 立即重新定位。
+
+版本：versionCode 111 / versionName 8.64，正式签名包 `dist/游龙灵动岛-v8.64-签名版.apk`。
 ## v8.63 更新（dynamicSpot 风格分类主菜单，2026-10-30）
 
 设置首页改成 dynamicSpot Pro 风格：
@@ -1381,6 +1398,7 @@ v5.3 的 k=110 手感偏慢，用户要求加快一点：
 - 未连接真机做最终手感调校；所有参数可按 `app/README.md` 的说明在 `IslandSpec.java` 一处微调。
 - 计时器依赖系统时钟 App 的通知格式（已做通用识别 + 关键字/包名/chronometer 多路判断），个别 ROM 可能需要补充包名。
 - 展开音乐卡片的五个按钮按录屏复原；其中上一首/暂停/下一首已接 MediaController 真实控制。
+
 
 
 

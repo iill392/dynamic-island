@@ -86,6 +86,10 @@ public class IslandView extends View {
         liquidGlass = on;
         invalidate();
     }
+
+    /** v8.64: current animated card size, used for camera-follow placement/clamping. */
+    public float getCardWidth() { return cardW; }
+    public float getCardHeight() { return cardH; }
     private boolean unlockAnimating;
     private long unlockElapsedMs;
     private int volumeStream;

@@ -15,12 +15,15 @@ import android.content.IntentFilter;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ServiceInfo;
+import android.content.res.Configuration;
+import android.hardware.display.DisplayManager;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.PixelFormat;
+import android.graphics.Rect;
 import android.graphics.Shader;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
@@ -43,6 +46,8 @@ import android.service.notification.StatusBarNotification;
 import android.text.InputType;
 import android.util.Log;
 import android.view.Gravity;
+import android.view.Display;
+import android.view.DisplayCutout;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
@@ -211,6 +216,9 @@ public class IslandService extends Service implements IslandBus.NotificationSink
     private boolean showRinger = true;
     private boolean showUnlock = true;
     private boolean showLock = true;
+    /** v8.64: in landscape, optionally place the island below the camera cutout. */
+    private boolean cameraFollow;
+    private int cameraFollowWindowY;
     private boolean wasPlugged;
     /** v8.40: battery status can lag one tick behind ACTION_POWER_CONNECTED; do not hide the
      * charging island immediately when the first BATTERY_CHANGED still says NOT_CHARGING. */
@@ -419,6 +427,11 @@ public class IslandService extends Service implements IslandBus.NotificationSink
                     break;
                 case ACTION_REFRESH:
                     loadVisibilityPrefs();
+                    if (lp != null && attached) {
+                        applyWindowPlacement(lp);
+                        updateWindowLayout();
+                        schedulePositionCorrection();
+                    }
                     if (notifActive && !showNotifications) dismissNotificationIsland();
                     if (chargingActive && !showCharging) endChargingNow();
                     if (!showVolume) volumeActive = false;
@@ -740,6 +753,7 @@ public class IslandService extends Service implements IslandBus.NotificationSink
         lp.width = size[0];
         lp.height = size[1];
         lp.y = 0;
+        applyWindowPlacement(lp);
         winW = size[0];
         winH = size[1];
         lp.setTitle("Island");
@@ -855,7 +869,7 @@ public class IslandService extends Service implements IslandBus.NotificationSink
             if (laidOut && view.getWindowToken() != null) {
                 int[] loc = new int[2];
                 view.getLocationOnScreen(loc);
-                int error = loc[1];
+                int error = loc[1] - cameraFollowWindowY;
                 int absError = Math.abs(error);
                 // Adjust only when it is worth doing (still off by >1px and the residual is not
                 // getting worse, so a ROM that clamps the window cannot push us further and
@@ -880,6 +894,66 @@ public class IslandService extends Service implements IslandBus.NotificationSink
 
     private void ensureWindow(int targetMode) {
         ensureWindow(targetMode, true);
+    }
+
+    /**
+     * v8.64: optional landscape camera-follow placement.
+     *
+     * Normal mode keeps the centre-top position (lp.x/lp.y = 0). In camera-follow mode, if the
+     * device is landscape and exposes a display cutout, the island is moved horizontally below
+     * that cutout (left/right camera notch in landscape) and clamped so the card stays on-screen.
+     */
+    private void applyWindowPlacement(WindowManager.LayoutParams params) {
+        if (params == null) return;
+        params.x = 0;
+        params.y = 0;
+        cameraFollowWindowY = 0;
+        if (!cameraFollow || view == null) return;
+        Configuration cfg = getResources().getConfiguration();
+        if (cfg.orientation != Configuration.ORIENTATION_LANDSCAPE) return;
+        if (Build.VERSION.SDK_INT < 29) return;
+
+        Display display = null;
+        try {
+            DisplayManager dm = (DisplayManager) getSystemService(DISPLAY_SERVICE);
+            if (dm != null) display = dm.getDisplay(Display.DEFAULT_DISPLAY);
+        } catch (Throwable ignored) {}
+        if (display == null) return;
+        DisplayCutout cutout = null;
+        try { cutout = display.getCutout(); } catch (Throwable ignored) {}
+        if (cutout == null) return;
+        Rect best = null;
+        for (Rect r : cutout.getBoundingRects()) {
+            if (r == null || r.width() <= 0 || r.height() <= 0) continue;
+            if (best == null || (long) r.width() * r.height()
+                    > (long) best.width() * best.height()) {
+                best = new Rect(r);
+            }
+        }
+        if (best == null) return;
+
+        android.util.DisplayMetrics metrics = new android.util.DisplayMetrics();
+        try { display.getRealMetrics(metrics); } catch (Throwable ignored) {}
+        int screenW = metrics.widthPixels > 0 ? metrics.widthPixels
+                : getResources().getDisplayMetrics().widthPixels;
+        int screenH = metrics.heightPixels > 0 ? metrics.heightPixels
+                : getResources().getDisplayMetrics().heightPixels;
+        float cardW = Math.max(1f, view.getCardWidth());
+        float cardH = Math.max(1f, view.getCardHeight());
+        float margin = 8f * (IslandSpec.DENSITY > 0f ? IslandSpec.DENSITY : 3f);
+
+        float centerX = best.centerX();
+        float half = cardW / 2f + margin;
+        if (half * 2f < screenW) {
+            centerX = Math.max(half, Math.min(screenW - half, centerX));
+        }
+        float desiredTop = best.bottom + margin;
+        float maxTop = Math.max(0f, screenH - cardH - margin);
+        desiredTop = Math.max(0f, Math.min(maxTop, desiredTop));
+
+        params.x = Math.round(centerX - screenW / 2f);
+        cameraFollowWindowY = Math.round(desiredTop - IslandSpec.cardTop());
+        params.y = cameraFollowWindowY;
     }
 
     /**
@@ -2585,6 +2659,7 @@ public class IslandService extends Service implements IslandBus.NotificationSink
         showRinger = p.getBoolean("show_ringer", true);
         showUnlock = p.getBoolean("show_unlock", true);
         showLock = p.getBoolean("show_lock", true);
+        cameraFollow = p.getBoolean("landscape_camera_follow", false);
     }
 
     private int desiredMode() {
@@ -2750,6 +2825,10 @@ public class IslandService extends Service implements IslandBus.NotificationSink
         view.ensureCompactContentVisible();
         repairNotificationContentIfBlank("settle");
         ensureWindow(view.getMode(), true);
+        if (cameraFollow && lp != null) {
+            applyWindowPlacement(lp);
+            updateWindowLayout();
+        }
         handler.post(() -> recomputeState(false));
     }
 

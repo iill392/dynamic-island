@@ -17,6 +17,8 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.LinearLayout;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -192,6 +194,37 @@ public class SettingsCategoryActivity extends Activity {
 
     // ----------------------------------------------------------------- position
     private void buildPosition(LinearLayout root) {
+        root.addView(sectionLabel("横屏位置模式"));
+        RadioGroup group = new RadioGroup(this);
+        group.setOrientation(RadioGroup.VERTICAL);
+        RadioButton centered = new RadioButton(this);
+        centered.setText("居中（默认）· 灵动岛始终在屏幕顶部中间");
+        centered.setTextSize(14);
+        centered.setTextColor(0xFF1F1F24);
+        centered.setId(101);
+        group.addView(centered);
+        RadioButton camera = new RadioButton(this);
+        camera.setText("跟随摄像头 · 横屏时停在摄像头下方");
+        camera.setTextSize(14);
+        camera.setTextColor(0xFF1F1F24);
+        camera.setId(102);
+        group.addView(camera);
+        boolean follow = prefs.getBoolean("landscape_camera_follow", false);
+        group.check(follow ? 102 : 101);
+        group.setOnCheckedChangeListener((g, checkedId) -> {
+            prefs.edit().putBoolean("landscape_camera_follow", checkedId == 102).apply();
+            refreshService();
+        });
+        root.addView(group);
+
+        TextView hint = new TextView(this);
+        hint.setText("「跟随摄像头」只在横屏且手机有刘海/挖孔时生效；竖屏仍保持居中。");
+        hint.setTextSize(12);
+        hint.setTextColor(0xFF7A7A84);
+        hint.setLineSpacing(dp(2), 1f);
+        hint.setPadding(0, dp(2), 0, dp(8));
+        root.addView(hint);
+
         root.addView(sectionLabel("垂直位置"));
         final TextView label = new TextView(this);
         label.setTextSize(13);

@@ -114,6 +114,9 @@ adb install -r E:\voice\dist\灵动岛-debug.apk
 - 音乐：`MediaSessionManager.getActiveSessions()`（通知使用权授权）读封面/标题/歌手/进度/播放态，
   `MediaController.Callback` 实时更新；暂停保留胶囊；海报无封面时清空旧封面。
 
+## v8.64 更新（横屏摄像头跟随）
+
+- 位置页两模式：居中 / 跟随摄像头；DisplayCutout + 边缘夹紧。
 ## v8.63 更新（菜单化）
 
 - 主菜单行（灵动岛/通用/外观/位置/权限/液态玻璃）；SettingsCategoryActivity 子页；蓝色头部。
@@ -586,6 +589,7 @@ adb install -r E:\voice\dist\灵动岛-debug.apk
 - 旋转/显示尺寸变化时重新标定几何并重建悬浮窗；
 - 充电仅在插拔边沿弹出，不会每 1% 电量反复出现；充电演示电量严格限制在 65.51%→65.52% 区间；
 - 悬浮窗尺寸/位置变化、服务启停、Activity 权限流程均有保护与异常捕获。
+
 
 
 
