@@ -894,12 +894,22 @@ public class IslandService extends Service implements IslandBus.NotificationSink
             return;
         }
         int[] size = view.windowSizeForMode(targetMode);
-        if (!allowShrink && (size[0] < winW || size[1] < winH)) return;
-        if (size[0] == winW && size[1] == winH) return;
-        winW = size[0];
-        winH = size[1];
-        lp.width = size[0];
-        lp.height = size[1];
+        int targetW = size[0];
+        int targetH = size[1];
+        if (!allowShrink) {
+            // v8.61: grow each axis independently. The old code returned entirely when *either*
+            // axis wanted to shrink, so unlock-square (tall) -> longer capsule (wider, shorter)
+            // kept the narrow unlock window and clipped the card into a square-cornered rectangle
+            // until the settle pass resized the window (~0.5 s). Grow width now, keep the extra
+            // height until settle.
+            targetW = Math.max(winW, targetW);
+            targetH = Math.max(winH, targetH);
+        }
+        if (targetW == winW && targetH == winH) return;
+        winW = targetW;
+        winH = targetH;
+        lp.width = targetW;
+        lp.height = targetH;
         updateWindowLayout();
         schedulePositionCorrection();
     }
