@@ -1,0 +1,34 @@
+# Build output / local tooling
+/app/.gradle/
+/app/.kotlin/
+/app/build/
+/app/app/build/
+/app/liquidglass/build/
+/app/local.properties
+/app/.idea/
+/app/captures/
+/app/.cxx/
+
+# APKs, source/key archives and signing material are deliverables/secrets, not source commits
+*.apk
+*.aab
+*.zip
+*.jks
+*.keystore
+/signing/
+/dist/
+
+# Large local reference / analysis / verification media
+/analysis/
+/ref/
+/verify/
+/preview/
+/tools/
+/null/
+/PowerShell 7.6.7/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.log
+*.tmp

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- v6.7: the settings UI is light (white) now; keep dark system-bar icons. -->
+    <style name="AppTheme" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">#FFFFFFFF</item>
+        <item name="android:statusBarColor">#FFFFFFFF</item>
+        <item name="android:navigationBarColor">#FFFFFFFF</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:colorAccent">#FF2E9E5B</item>
+    </style>
+</resources>

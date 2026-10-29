@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">游龙灵动岛bata【严禁外传】</string>
+    <string name="a11y_description">增强模式：让灵动岛显示在状态栏上方（与参考 App 相同的无障碍悬浮窗方式）。不读取屏幕内容。</string>
+    <string name="a11y_label">游龙灵动岛增强模式</string>
+</resources>
