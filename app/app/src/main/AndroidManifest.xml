@@ -47,15 +47,6 @@
         </service>
 
         <service
-            android:name=".LiquidIslandService"
-            android:exported="false"
-            android:foregroundServiceType="specialUse">
-            <property
-                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="liquid glass dynamic island overlay" />
-        </service>
-
-        <service
             android:name=".IslandNotificationListener"
             android:exported="true"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">

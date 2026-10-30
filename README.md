@@ -78,6 +78,19 @@ adb install -r E:\voice\dist\灵动岛-debug.apk
 3. **窗口尺寸小优化**：展开态悬浮窗宽度由 1.156 屏宽钳制到 1 屏宽（卡片 0.98W 仍完整可见，超屏过冲本来就被屏幕裁掉），减少无谓的 surface 与触摸区域。
 4. **版本**：versionCode 5 / versionName 3.2（`dist/灵动岛-debug.apk`）。
 
+## v8.65 更新（删除液态玻璃灵动岛，2026-10-30）
+
+按用户要求彻底删除液态玻璃灵动岛：
+
+- 删除 `:liquidglass` Gradle 模块、Kotlin/Compose 依赖与全部 `com.kyant.*` 源码；
+- 删除 `LiquidIslandService`、`LiquidGlassActivity`、`ic_menu_liquid`；
+- 主菜单移除「液态玻璃」行；
+- 删除共享渲染中的液态玻璃材质分支、blur behind 窗口标志和 `useLiquidGlass` 接口；
+- 恢复 `android.useAndroidX=false`、纯 Java 构建；
+- APK 从 19.4MB 降到 **1.21MB**；
+- 其余动静岛功能、分类菜单、权限页、横屏摄像头跟随模式保留。
+
+版本：versionCode 112 / versionName 8.65，正式签名包 `dist/游龙灵动岛-v8.65-签名版.apk`。
 ## v8.64 更新（横屏摄像头跟随模式，2026-10-30）
 
 位置页新增「横屏位置模式」两个选项：
@@ -1398,6 +1411,7 @@ v5.3 的 k=110 手感偏慢，用户要求加快一点：
 - 未连接真机做最终手感调校；所有参数可按 `app/README.md` 的说明在 `IslandSpec.java` 一处微调。
 - 计时器依赖系统时钟 App 的通知格式（已做通用识别 + 关键字/包名/chronometer 多路判断），个别 ROM 可能需要补充包名。
 - 展开音乐卡片的五个按钮按录屏复原；其中上一首/暂停/下一首已接 MediaController 真实控制。
+
 
 
 

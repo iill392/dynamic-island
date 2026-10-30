@@ -229,8 +229,6 @@ public class IslandService extends Service implements IslandBus.NotificationSink
     /** True once onDestroy started; posted callbacks must not touch views/windows afterwards. */
     private boolean destroyed;
 
-    /** v8.46: the LiquidIslandService subclass overrides this; default Canvas island unchanged. */
-    protected boolean useLiquidGlass() { return false; }
     /** R-01: startForeground() failed -> the service must stop, not keep running without FGS. */
     private boolean foregroundFailed;
     /** Single background thread for album-art scaling / colour extraction (never on the main thread). */
@@ -618,7 +616,6 @@ public class IslandService extends Service implements IslandBus.NotificationSink
 
     private void buildView() {
         view = new IslandView(this);
-        view.setLiquidGlass(useLiquidGlass());
         view.setCallback(new IslandView.Callback() {
             /** v3.3: the callback also carries the vertical fraction for the notification card. */
             @Override public void onIslandTap(float xFraction, float yFraction) {
@@ -740,15 +737,6 @@ public class IslandService extends Service implements IslandBus.NotificationSink
                 | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
                 | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
                 | WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED;
-        if (useLiquidGlass()) {
-            lp.flags |= WindowManager.LayoutParams.FLAG_BLUR_BEHIND;
-            if (Build.VERSION.SDK_INT >= 31) {
-                try {
-                    lp.setBlurBehindRadius(Math.round(22f * (IslandSpec.DENSITY > 0f
-                            ? IslandSpec.DENSITY : 3f)));
-                } catch (Throwable ignored) {}
-            }
-        }
         lp.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
         lp.width = size[0];
         lp.height = size[1];
@@ -775,10 +763,7 @@ public class IslandService extends Service implements IslandBus.NotificationSink
         }
         // R-02: try the accessibility overlay first — TYPE_ACCESSIBILITY_OVERLAY does not need the
         // "draw over other apps" permission, so enhanced mode can work on its own.
-        // v8.46: the liquid-glass material needs the normal overlay window so FLAG_BLUR_BEHIND can
-        // blur the real backdrop; fall back to a11y only when overlay permission is missing.
         IslandAccessibilityService a11y = IslandAccessibilityService.get();
-        if (useLiquidGlass() && Settings.canDrawOverlays(this)) a11y = null;
         if (a11y != null) {
             lp.type = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY;
             try {
@@ -3577,10 +3562,5 @@ public class IslandService extends Service implements IslandBus.NotificationSink
     }
 
     public static boolean isRunning() { return instance != null; }
-
-    /** v8.56: true when the running overlay is the liquid-glass service subclass. */
-    public static boolean isLiquidRunning() {
-        return instance != null && instance.useLiquidGlass();
-    }
 }
 

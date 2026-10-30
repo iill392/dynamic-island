@@ -262,11 +262,7 @@ public class SettingsCategoryActivity extends Activity {
     // -------------------------------------------------------------------- utils
     private void refreshService() {
         if (!IslandService.isRunning()) return;
-        if (IslandService.isLiquidRunning()) {
-            LiquidIslandService.start(this, IslandService.ACTION_REFRESH);
-        } else {
-            IslandService.start(this, IslandService.ACTION_REFRESH);
-        }
+        IslandService.start(this, IslandService.ACTION_REFRESH);
     }
 
     private boolean ensureService() {
@@ -291,12 +287,10 @@ public class SettingsCategoryActivity extends Activity {
 
     private void stopServices() {
         stopService(new Intent(this, IslandService.class));
-        try { stopService(new Intent(this, LiquidIslandService.class)); } catch (Throwable ignored) {}
     }
 
     private void startSelected() {
-        if (prefs.getBoolean("use_liquid", false)) LiquidIslandService.start(this);
-        else IslandService.start(this, null);
+        IslandService.start(this, null);
     }
 
     private void addToggle(LinearLayout root, String title, String key, boolean def) {

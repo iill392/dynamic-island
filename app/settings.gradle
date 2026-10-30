@@ -14,5 +14,5 @@ dependencyResolutionManagement {
 }
 rootProject.name = "DynamicIsland"
 include ':app'
-include ':liquidglass'
+
 

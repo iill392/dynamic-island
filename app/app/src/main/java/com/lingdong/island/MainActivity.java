@@ -33,7 +33,6 @@ public class MainActivity extends Activity {
     private TextView statusView;
     private SharedPreferences prefs;
     private android.widget.Switch masterSwitch;
-    private android.widget.Switch liquidSwitch;
     private TextView topPermissionText;
     private TextView permissionRowSub;
     private TextView headerStatus;
@@ -151,19 +150,6 @@ public class MainActivity extends Activity {
         // subtitle TextView is child 1 of the text column which is child 1 of the row
         permissionRowSub = (TextView) ((LinearLayout) permRow.getChildAt(1)).getChildAt(1);
 
-        LinearLayout liquidRow = addMenuRow(menu, "液态玻璃", "独立液态玻璃灵动岛",
-                0xFF7E57C2, R.drawable.ic_menu_liquid, true, null);
-        liquidSwitch = (android.widget.Switch) liquidRow.getChildAt(2);
-        liquidSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            if (updatingTopSwitches) return;
-            prefs.edit().putBoolean("use_liquid", isChecked).apply();
-            if (prefs.getBoolean("enabled", false) && IslandService.isRunning()) {
-                stopIslandServices();
-                startSelectedService();
-            }
-            refresh();
-        });
-
         TextView footer = new TextView(this);
         footer.setText("bata【严禁外传】\n开启前请先在「权限」中逐项授权。");
         footer.setTextSize(12);
@@ -257,7 +243,7 @@ public class MainActivity extends Activity {
     }
 
     private void toggleMasterFromHeader() {
-        boolean on = prefs.getBoolean("enabled", false) || IslandService.isLiquidRunning();
+        boolean on = prefs.getBoolean("enabled", false) || IslandService.isRunning();
         if (on) {
             setMasterEnabled(false);
         } else if (!hasRequiredPermissions()) {
@@ -309,98 +295,6 @@ public class MainActivity extends Activity {
         return Settings.canDrawOverlays(this) || isAccessibilityAccessEnabled();
     }
 
-    /** v8.62: top category — three side-by-side cards (island / liquid glass / permissions). */
-    private void buildTopSwitchRow(LinearLayout root) {
-        LinearLayout row = new LinearLayout(this);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setPadding(0, dp(2), 0, dp(8));
-        root.addView(row);
-
-        masterSwitch = addTopSwitchCard(row, "开启灵动岛");
-        masterSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            if (updatingTopSwitches) return;
-            if (!isChecked) {
-                prefs.edit().putBoolean("enabled", false).apply();
-                stopIslandServices();
-                refresh();
-                return;
-            }
-            if (!hasRequiredPermissions()) {
-                updatingTopSwitches = true;
-                buttonView.setChecked(false);
-                updatingTopSwitches = false;
-                toastText("请先在权限页逐项授权，返回后再开启灵动岛");
-                startActivity(new Intent(this, PermissionActivity.class));
-                return;
-            }
-            prefs.edit().putBoolean("enabled", true).apply();
-            stopIslandServices();
-            startSelectedService();
-            refresh();
-        });
-
-        liquidSwitch = addTopSwitchCard(row, "液态玻璃");
-        liquidSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            if (updatingTopSwitches) return;
-            prefs.edit().putBoolean("use_liquid", isChecked).apply();
-            if (prefs.getBoolean("enabled", false) && IslandService.isRunning()) {
-                stopIslandServices();
-                startSelectedService();
-            }
-            refresh();
-        });
-
-        // The third card is the permission entry; not a preference switch.
-        LinearLayout permCard = new LinearLayout(this);
-        permCard.setOrientation(LinearLayout.VERTICAL);
-        permCard.setGravity(android.view.Gravity.CENTER);
-        permCard.setBackground(roundedBg(0xFFF0F6FF, 16, 0xFFCFE0FF));
-        permCard.setPadding(dp(8), dp(10), dp(8), dp(10));
-        LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(0, dp(96), 1f);
-        plp.setMargins(dp(4), 0, dp(0), 0);
-        permCard.setLayoutParams(plp);
-        TextView permTitle = new TextView(this);
-        permTitle.setText("权限");
-        permTitle.setTextSize(14);
-        permTitle.setTextColor(0xFF1F1F24);
-        permTitle.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-        permTitle.setGravity(android.view.Gravity.CENTER);
-        permCard.addView(permTitle);
-        topPermissionText = new TextView(this);
-        topPermissionText.setTextSize(11);
-        topPermissionText.setTextColor(0xFF2563EB);
-        topPermissionText.setGravity(android.view.Gravity.CENTER);
-        topPermissionText.setPadding(0, dp(6), 0, 0);
-        permCard.addView(topPermissionText);
-        permCard.setOnClickListener(v -> startActivity(new Intent(this, PermissionActivity.class)));
-        row.addView(permCard);
-    }
-
-    private android.widget.Switch addTopSwitchCard(LinearLayout row, String title) {
-        LinearLayout card = new LinearLayout(this);
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setGravity(android.view.Gravity.CENTER);
-        card.setBackground(roundedBg(0xFFF7F7FA, 16, 0xFFE1E2E8));
-        card.setPadding(dp(8), dp(10), dp(8), dp(10));
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(96), 1f);
-        lp.setMargins(0, 0, dp(8), 0);
-        card.setLayoutParams(lp);
-
-        TextView label = new TextView(this);
-        label.setText(title);
-        label.setTextSize(13);
-        label.setTextColor(0xFF1F1F24);
-        label.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-        label.setGravity(android.view.Gravity.CENTER);
-        card.addView(label);
-        android.widget.Switch sw = new android.widget.Switch(this);
-        sw.setShowText(false);
-        sw.setPadding(0, dp(6), 0, 0);
-        card.addView(sw);
-        row.addView(card);
-        return sw;
-    }
-
     private GradientDrawable roundedBg(int fill, int radiusDp, int stroke) {
         GradientDrawable bg = new GradientDrawable();
         bg.setColor(fill);
@@ -421,15 +315,10 @@ public class MainActivity extends Activity {
 
     private void stopIslandServices() {
         stopService(new Intent(this, IslandService.class));
-        try { stopService(new Intent(this, LiquidIslandService.class)); } catch (Throwable ignored) {}
     }
 
     private void startSelectedService() {
-        if (prefs.getBoolean("use_liquid", false)) {
-            LiquidIslandService.start(this);
-        } else {
-            IslandService.start(this, null);
-        }
+        IslandService.start(this, null);
     }
 
     private void updateTopPermissionState() {
@@ -605,11 +494,7 @@ public class MainActivity extends Activity {
 
     private void refreshGeometryService() {
         if (!IslandService.isRunning()) return;
-        if (IslandService.isLiquidRunning()) {
-            LiquidIslandService.start(this, IslandService.ACTION_REFRESH);
-        } else {
-            IslandService.start(this, IslandService.ACTION_REFRESH);
-        }
+        IslandService.start(this, IslandService.ACTION_REFRESH);
     }
 
     /** v7.6: pick which apps are allowed to pop the notification island (multi-choice). */
@@ -692,11 +577,7 @@ public class MainActivity extends Activity {
         if (masterSwitch != null) {
             updatingTopSwitches = true;
             masterSwitch.setChecked(prefs.getBoolean("enabled", false)
-                    || IslandService.isLiquidRunning());
-            if (liquidSwitch != null) {
-                liquidSwitch.setChecked(prefs.getBoolean("use_liquid", false)
-                        || IslandService.isLiquidRunning());
-            }
+                    || IslandService.isRunning());
             updatingTopSwitches = false;
         }
         updateTopPermissionState();

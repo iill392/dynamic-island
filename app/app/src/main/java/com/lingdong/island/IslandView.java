@@ -79,13 +79,6 @@ public class IslandView extends View {
     private IslandData.Music music = new IslandData.Music();
     private IslandData.NotificationItem notification = new IslandData.NotificationItem();
     private boolean ringerSilent;
-    private boolean liquidGlass;
-
-    /** v8.46: use a translucent liquid-glass material instead of the opaque black card. */
-    public void setLiquidGlass(boolean on) {
-        liquidGlass = on;
-        invalidate();
-    }
 
     /** v8.64: current animated card size, used for camera-follow placement/clamping. */
     public float getCardWidth() { return cardW; }
@@ -1476,31 +1469,6 @@ public class IslandView extends View {
     private void drawCardBackground(Canvas canvas) {
         int m = mode == MODE_HIDDEN ? prevMode : mode;
         long now = SystemClock.uptimeMillis();
-        if (liquidGlass) {
-            // v8.46 liquid-glass material: translucent tint + diagonal/edge highlights.
-            // The actual background blur/refraction is supplied by FLAG_BLUR_BEHIND on the
-            // overlay window (Android 12+); this layer supplies the glass surface and edges.
-            paint.setShader(null);
-            paint.setStyle(Paint.Style.FILL);
-            paint.setColor(0x66101822);
-            canvas.drawRect(cardRect, paint);
-            paint.setShader(new LinearGradient(cardRect.left, cardRect.top,
-                    cardRect.right, cardRect.bottom,
-                    new int[]{0x55FFFFFF, 0x18FFFFFF, 0x0AFFFFFF, 0x2EFFFFFF},
-                    null, Shader.TileMode.CLAMP));
-            canvas.drawRect(cardRect, paint);
-            paint.setShader(null);
-            paint.setStyle(Paint.Style.STROKE);
-            paint.setStrokeWidth(Math.max(1f, cardH * 0.012f));
-            paint.setColor(0x77FFFFFF);
-            float inset = paint.getStrokeWidth() / 2f;
-            tmpRect.set(cardRect.left + inset, cardRect.top + inset,
-                    cardRect.right - inset, cardRect.bottom - inset);
-            canvas.drawRoundRect(tmpRect, Math.max(0f, radius - inset),
-                    Math.max(0f, radius - inset), paint);
-            paint.setStyle(Paint.Style.FILL);
-            return;
-        }
         // v3.4: every normal island state is drawn on an OPAQUE black card. The timer card used to fade to
         // ~62 % black at its bottom edge (a copy of the reference recording), which made the island
         // look semi-transparent; the user explicitly asked for an opaque island.
