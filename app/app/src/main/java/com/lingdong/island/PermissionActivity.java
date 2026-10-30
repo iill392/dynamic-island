@@ -84,6 +84,23 @@ public class PermissionActivity extends Activity {
         summary.setPadding(0, dp(2), 0, dp(12));
         root.addView(summary);
 
+        Button a11yShortcut = new Button(this);
+        a11yShortcut.setText("打开无障碍设置（必需）");
+        a11yShortcut.setAllCaps(false);
+        a11yShortcut.setTextSize(15);
+        a11yShortcut.setTextColor(0xFF2563EB);
+        GradientDrawable a11yBg = new GradientDrawable();
+        a11yBg.setColor(0xFFEFF4FF);
+        a11yBg.setCornerRadius(dp(14));
+        a11yBg.setStroke(dp(1), 0xFFCFE0FF);
+        a11yShortcut.setBackground(a11yBg);
+        LinearLayout.LayoutParams alp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(48));
+        alp.bottomMargin = dp(12);
+        a11yShortcut.setLayoutParams(alp);
+        a11yShortcut.setOnClickListener(v -> openAccessibility());
+        root.addView(a11yShortcut);
+
         content = new LinearLayout(this);
         content.setOrientation(LinearLayout.VERTICAL);
         root.addView(content);

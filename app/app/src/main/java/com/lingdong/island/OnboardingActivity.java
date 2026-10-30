@@ -163,6 +163,15 @@ public class OnboardingActivity extends Activity {
                 : "必需权限：" + done + "/5" + (done >= 5 ? " · 已完成" : " · 全部授权后才能继续"));
         permissionSummary.setTextColor(done >= 5 ? 0xFF2E9E5B : 0xFFB45309);
 
+        // v8.72: an explicit accessibility shortcut at the top so the button is always visible.
+        Button a11yShortcut = secondaryButton(
+                en ? (a11y ? "Accessibility is enabled · open settings"
+                        : "Open accessibility settings (required)")
+                        : (a11y ? "无障碍已开启 · 打开设置"
+                        : "打开无障碍设置（必需）"),
+                v -> openAccessibility());
+        content.addView(a11yShortcut);
+
         addPermissionRow(en ? "Display over other apps" : "悬浮窗权限",
                 en ? "Draw the island above other apps" : "让灵动岛显示在其他应用上方",
                 overlay, this::openOverlaySettings);
@@ -172,8 +181,8 @@ public class OnboardingActivity extends Activity {
         addPermissionRow(en ? "Notification permission" : "通知权限",
                 en ? "Android 13+ foreground-service notification" : "Android 13+ 允许前台服务通知",
                 runtime, this::requestNotifications);
-        addPermissionRow(en ? "Accessibility enhancement" : "无障碍增强",
-                en ? "Keep the island above the status bar" : "让灵动岛显示在状态栏上方",
+        addPermissionRow(en ? "Accessibility permission" : "无障碍权限（必需）",
+                en ? "Enable the accessibility service for this app" : "开启本应用的无障碍服务",
                 a11y, this::openAccessibility);
         addPermissionRow(en ? "Ignore battery optimization" : "忽略电池优化",
                 en ? "Prevent the system from killing the overlay" : "避免系统清理灵动岛后台",
