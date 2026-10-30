@@ -114,6 +114,9 @@ adb install -r E:\voice\dist\灵动岛-debug.apk
 - 音乐：`MediaSessionManager.getActiveSessions()`（通知使用权授权）读封面/标题/歌手/进度/播放态，
   `MediaController.Callback` 实时更新；暂停保留胶囊；海报无封面时清空旧封面。
 
+## v8.68 更新（闪退修复）
+
+- 修正主菜单去图标后的子 View 索引，修复引导完成进入主页闪退。
 ## v8.67 更新（后台隐藏/闹钟保活）
 
 - 通用页：隐藏常驻通知、AlarmManager 15min 保活重启、精确闹钟授权/回退。
@@ -598,6 +601,7 @@ adb install -r E:\voice\dist\灵动岛-debug.apk
 - 旋转/显示尺寸变化时重新标定几何并重建悬浮窗；
 - 充电仅在插拔边沿弹出，不会每 1% 电量反复出现；充电演示电量严格限制在 65.51%→65.52% 区间；
 - 悬浮窗尺寸/位置变化、服务启停、Activity 权限流程均有保护与异常捕获。
+
 
 
 

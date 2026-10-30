@@ -112,7 +112,7 @@ public class MainActivity extends Activity {
 
         LinearLayout permRow = addMenuRow(menu, "权限", "点击逐项授权", false,
                 () -> startActivity(new Intent(this, PermissionActivity.class)));
-        permissionRowSub = (TextView) ((LinearLayout) permRow.getChildAt(1)).getChildAt(1);
+        permissionRowSub = (TextView) ((LinearLayout) permRow.getChildAt(0)).getChildAt(1);
 
         TextView footer = new TextView(this);
         footer.setText("开启前请先在「权限」中逐项授权。");
