@@ -78,6 +78,23 @@ adb install -r E:\voice\dist\灵动岛-debug.apk
 3. **窗口尺寸小优化**：展开态悬浮窗宽度由 1.156 屏宽钳制到 1 屏宽（卡片 0.98W 仍完整可见，超屏过冲本来就被屏幕裁掉），减少无谓的 surface 与触摸区域。
 4. **版本**：versionCode 5 / versionName 3.2（`dist/灵动岛-debug.apk`）。
 
+## v8.67 更新（后台隐藏 + 闹钟保活，2026-10-30）
+
+通用页新增「后台与保活」：
+
+1. **后台隐藏**
+   - 尽量隐藏常驻前台服务通知；
+   - 通知渠道使用最低重要性、锁屏隐藏、无声音/角标；
+   - 说明：Android 强制前台服务保留通知，无法完全删除，只能尽量降低显示层级。
+2. **闹钟保活（防 LMK）**
+   - 使用 AlarmManager 每 15 分钟唤醒一次；
+   - 若服务被系统/LMK 杀死，`KeepAliveReceiver` 收到闹钟后重新 `startForegroundService`；
+   - 优先精确闹钟 `setExactAndAllowWhileIdle`；Android 12+ 无精确闹钟权限时回退 `setAndAllowWhileIdle`；
+   - 开关开启时会跳转「允许精确闹钟」授权页（如系统支持）；
+   - 开机/服务启动/刷新时自动重新排程，关闭开关或关闭灵动岛时取消；
+   - 新增 `SCHEDULE_EXACT_ALARM` 权限与 `KeepAliveReceiver`。
+
+版本：versionCode 114 / versionName 8.67，正式签名包 `dist/游龙灵动岛-v8.67-签名版.apk`。
 ## v8.66 更新（无图标分类菜单 + 首次引导 + 外观实时预览，2026-10-30）
 
 1. **去掉图标和蓝色标题栏**
@@ -1429,6 +1446,7 @@ v5.3 的 k=110 手感偏慢，用户要求加快一点：
 - 未连接真机做最终手感调校；所有参数可按 `app/README.md` 的说明在 `IslandSpec.java` 一处微调。
 - 计时器依赖系统时钟 App 的通知格式（已做通用识别 + 关键字/包名/chronometer 多路判断），个别 ROM 可能需要补充包名。
 - 展开音乐卡片的五个按钮按录屏复原；其中上一首/暂停/下一首已接 MediaController 真实控制。
+
 
 
 

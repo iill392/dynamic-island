@@ -1,6 +1,7 @@
 package com.lingdong.island;
 
 import android.app.Activity;
+import android.app.AlarmManager;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -8,6 +9,7 @@ import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
@@ -63,6 +65,7 @@ public class SettingsCategoryActivity extends Activity {
 
     @Override protected void onResume() {
         super.onResume();
+        AlarmScheduler.schedule(this);
         if (CATEGORY_APPEARANCE.equals(category)) startAppearancePreview();
     }
 
@@ -198,6 +201,45 @@ public class SettingsCategoryActivity extends Activity {
         addButton(root, "结束预览", v -> {
             if (IslandService.isRunning()) IslandService.start(this, IslandService.ACTION_DEMO_HIDE);
         });
+
+        root.addView(sectionLabel("后台与保活"));
+        CheckBox hideNotice = new CheckBox(this);
+        hideNotice.setText("后台隐藏：尽量隐藏常驻通知");
+        hideNotice.setTextSize(14);
+        hideNotice.setTextColor(0xFF1F1F24);
+        hideNotice.setChecked(prefs.getBoolean("hide_background_notice", false));
+        hideNotice.setOnCheckedChangeListener((b, checked) -> {
+            prefs.edit().putBoolean("hide_background_notice", checked).apply();
+            if (IslandService.isRunning()) {
+                boolean was = prefs.getBoolean("enabled", false);
+                stopServices();
+                if (was) startSelected();
+            }
+        });
+        root.addView(hideNotice);
+
+        TextView hideHint = new TextView(this);
+        hideHint.setText("Android 要求前台服务必须保留通知，这里只能尽量降低显示层级。");
+        hideHint.setTextSize(11);
+        hideHint.setTextColor(0xFF8A8A93);
+        hideHint.setPadding(dp(4), 0, 0, dp(6));
+        root.addView(hideHint);
+
+        CheckBox alarm = new CheckBox(this);
+        alarm.setText("闹钟保活：每 15 分钟唤醒并重启服务（防 LMK）");
+        alarm.setTextSize(14);
+        alarm.setTextColor(0xFF1F1F24);
+        alarm.setChecked(prefs.getBoolean("alarm_keepalive", false));
+        alarm.setOnCheckedChangeListener((b, checked) -> {
+            prefs.edit().putBoolean("alarm_keepalive", checked).apply();
+            if (checked) {
+                requestExactAlarmPermission();
+                AlarmScheduler.schedule(this);
+            } else {
+                AlarmScheduler.cancel(this);
+            }
+        });
+        root.addView(alarm);
     }
 
     // --------------------------------------------------------------- appearance
@@ -299,6 +341,16 @@ public class SettingsCategoryActivity extends Activity {
     private void refreshService() {
         if (!IslandService.isRunning()) return;
         IslandService.start(this, IslandService.ACTION_REFRESH);
+    }
+
+    private void requestExactAlarmPermission() {
+        if (Build.VERSION.SDK_INT < 31) return;
+        try {
+            AlarmManager am = (AlarmManager) getSystemService(ALARM_SERVICE);
+            if (am != null && am.canScheduleExactAlarms()) return;
+            startActivity(new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                    Uri.parse("package:" + getPackageName())));
+        } catch (Throwable ignored) {}
     }
 
     private boolean ensureService() {

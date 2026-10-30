@@ -390,6 +390,7 @@ public class IslandService extends Service implements IslandBus.NotificationSink
         registerLock();
         initVolumeBaseline();
         registerVolumeReceiver();
+        AlarmScheduler.schedule(this);
         // Must be recorded before IslandBus.register() replays currently-posted notifications:
         // only notifications that arrive after this point are allowed to pop on the island.
         serviceStartWallMs = System.currentTimeMillis();
@@ -429,6 +430,7 @@ public class IslandService extends Service implements IslandBus.NotificationSink
                     break;
                 case ACTION_REFRESH:
                     loadVisibilityPrefs();
+                    AlarmScheduler.schedule(this);
                     if (lp != null && attached) {
                         applyWindowPlacement(lp);
                         updateWindowLayout();
@@ -532,6 +534,9 @@ public class IslandService extends Service implements IslandBus.NotificationSink
     @Override public void onDestroy() {
         destroyed = true;
         instance = null;
+        // v8.67: if the user disabled the island, this cancels the keep-alive alarm; otherwise
+        // re-arm it so a later system/LMK kill is followed by a restart.
+        AlarmScheduler.schedule(this);
         IslandBus.unregister(this);
         handler.removeCallbacksAndMessages(null);
         handler.removeCallbacks(unlockTicker);
@@ -582,11 +587,15 @@ public class IslandService extends Service implements IslandBus.NotificationSink
 
     private void startForegroundCompat() {
         NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-        NotificationChannel ch = new NotificationChannel(CHANNEL_ID, "游龙灵动岛服务",
+        boolean hideNotice = getSharedPreferences("island", MODE_PRIVATE)
+                .getBoolean("hide_background_notice", false);
+        NotificationChannel ch = new NotificationChannel(CHANNEL_ID,
+                hideNotice ? "后台服务" : "游龙灵动岛服务",
                 NotificationManager.IMPORTANCE_MIN);
         ch.setShowBadge(false);
         ch.enableVibration(false);
         ch.setSound(null, null);
+        if (hideNotice) ch.setLockscreenVisibility(Notification.VISIBILITY_SECRET);
         nm.createNotificationChannel(ch);
         Intent open = new Intent(this, MainActivity.class);
         PendingIntent pi = PendingIntent.getActivity(this, 0, open,
@@ -602,6 +611,8 @@ public class IslandService extends Service implements IslandBus.NotificationSink
                 // sound/vibration disabled above is the equivalent for this foreground notification.
                 .setOnlyAlertOnce(true)
                 .setCategory(Notification.CATEGORY_SERVICE)
+                .setVisibility(hideNotice ? Notification.VISIBILITY_SECRET
+                        : Notification.VISIBILITY_PRIVATE)
                 .build();
         try {
             if (Build.VERSION.SDK_INT >= 34) {
