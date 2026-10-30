@@ -45,6 +45,8 @@ public class SettingsCategoryActivity extends Activity {
 
     private SharedPreferences prefs;
     private String category = CATEGORY_GENERAL;
+    private boolean previewStarted;
+    private boolean previewServiceWasRunning;
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -59,6 +61,35 @@ public class SettingsCategoryActivity extends Activity {
         setContentView(buildUi());
     }
 
+    @Override protected void onResume() {
+        super.onResume();
+        if (CATEGORY_APPEARANCE.equals(category)) startAppearancePreview();
+    }
+
+    @Override protected void onStop() {
+        stopAppearancePreview();
+        super.onStop();
+    }
+
+    /** v8.66: entering 外观 immediately shows a live island preview for size tuning. */
+    private void startAppearancePreview() {
+        if (previewStarted) return;
+        if (!Settings.canDrawOverlays(this) && !isAccessibilityEnabled()) return;
+        previewServiceWasRunning = IslandService.isRunning();
+        IslandService.start(this, IslandService.ACTION_DEMO_APPEARANCE);
+        previewStarted = true;
+    }
+
+    private void stopAppearancePreview() {
+        if (!previewStarted) return;
+        previewStarted = false;
+        if (previewServiceWasRunning) {
+            IslandService.start(this, IslandService.ACTION_DEMO_HIDE);
+        } else {
+            stopService(new Intent(this, IslandService.class));
+        }
+    }
+
     private View buildUi() {
         ScrollView scroll = new ScrollView(this);
         scroll.setBackgroundColor(0xFFF7F8FA);
@@ -69,14 +100,14 @@ public class SettingsCategoryActivity extends Activity {
         LinearLayout bar = new LinearLayout(this);
         bar.setOrientation(LinearLayout.HORIZONTAL);
         bar.setGravity(Gravity.CENTER_VERTICAL);
-        bar.setBackgroundColor(0xFF0B7FA8);
-        bar.setPadding(dp(10), dp(20), dp(18), dp(20));
+        bar.setBackgroundColor(0xFFFFFFFF);
+        bar.setPadding(dp(10), dp(18), dp(18), dp(18));
         page.addView(bar);
 
         TextView back = new TextView(this);
         back.setText("‹");
         back.setTextSize(34);
-        back.setTextColor(0xFFFFFFFF);
+        back.setTextColor(0xFF1A1A1F);
         back.setGravity(Gravity.CENTER);
         back.setPadding(dp(8), 0, dp(10), dp(2));
         back.setOnClickListener(v -> finish());
@@ -85,10 +116,15 @@ public class SettingsCategoryActivity extends Activity {
         TextView title = new TextView(this);
         title.setText(titleForCategory());
         title.setTextSize(23);
-        title.setTextColor(0xFFFFFFFF);
+        title.setTextColor(0xFF1A1A1F);
         title.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         bar.addView(title, new LinearLayout.LayoutParams(0,
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        View barDivider = new View(this);
+        barDivider.setBackgroundColor(0xFFEDEEF2);
+        page.addView(barDivider, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(1)));
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);

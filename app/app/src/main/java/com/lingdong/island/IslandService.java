@@ -78,6 +78,7 @@ public class IslandService extends Service implements IslandBus.NotificationSink
     public static final String ACTION_DEMO_CHARGE = "com.lingdong.island.DEMO_CHARGE";
     public static final String ACTION_DEMO_TIMER = "com.lingdong.island.DEMO_TIMER";
     public static final String ACTION_DEMO_MUSIC = "com.lingdong.island.DEMO_MUSIC";
+    public static final String ACTION_DEMO_APPEARANCE = "com.lingdong.island.DEMO_APPEARANCE";
     public static final String ACTION_DEMO_HIDE = "com.lingdong.island.DEMO_HIDE";
     public static final String ACTION_REFRESH = "com.lingdong.island.REFRESH";
 
@@ -417,6 +418,9 @@ public class IslandService extends Service implements IslandBus.NotificationSink
                     break;
                 case ACTION_DEMO_MUSIC:
                     startMusicDemo();
+                    break;
+                case ACTION_DEMO_APPEARANCE:
+                    startAppearanceDemo();
                     break;
                 case ACTION_DEMO_HIDE:
                     // F-13: "结束预览" is an immediate action — an expanded preview snaps away
@@ -2651,6 +2655,7 @@ public class IslandService extends Service implements IslandBus.NotificationSink
         // v8.53: the unlock playback owns the island until it ends — even a preview/demo or a
         // newly arrived notification/charge/volume HUD must wait.
         if (unlockAnimating || unlockHold) return IslandView.MODE_UNLOCK;
+        if (demoMode == 4) return IslandView.MODE_IDLE;
         if (demoMode == 1) return chargingActive ? IslandView.MODE_CHARGE : IslandView.MODE_HIDDEN;
         if (demoMode == 3) return IslandView.MODE_MUSIC_COMPACT;
         // v8.47: volume keys produce a short HUD over everything except unlock playback.
@@ -3256,6 +3261,15 @@ public class IslandService extends Service implements IslandBus.NotificationSink
     }
 
     // ================================================================== demos
+    /** v8.66: keep a live idle capsule visible while the appearance page is open. */
+    private void startAppearanceDemo() {
+        demoMode = 4;
+        demoUntil = Long.MAX_VALUE;
+        volumeActive = false;
+        recomputeState(false);
+        if (view != null) view.refreshFrame();
+    }
+
     private void startChargingDemo() {
         if (view == null) return;
         demoMode = 1;

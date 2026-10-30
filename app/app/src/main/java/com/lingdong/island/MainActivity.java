@@ -30,18 +30,19 @@ import java.util.Set;
 public class MainActivity extends Activity {
 
     private static final int REQ_NOTIF = 10;
-    private TextView statusView;
     private SharedPreferences prefs;
     private android.widget.Switch masterSwitch;
-    private TextView topPermissionText;
     private TextView permissionRowSub;
-    private TextView headerStatus;
-    private TextView headerPlay;
     private boolean updatingTopSwitches;
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         prefs = getSharedPreferences("island", MODE_PRIVATE);
+        if (!prefs.getBoolean("onboarded", false)) {
+            startActivity(new Intent(this, OnboardingActivity.class));
+            finish();
+            return;
+        }
         setContentView(buildUi());
         // v6.7: white settings page -> dark status/navigation bar icons.
         if (Build.VERSION.SDK_INT >= 26) {
@@ -70,91 +71,54 @@ public class MainActivity extends Activity {
 
     private View buildUi() {
         ScrollView scroll = new ScrollView(this);
-        scroll.setBackgroundColor(0xFFF7F8FA);
+        scroll.setBackgroundColor(0xFFFFFFFF);
+
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-
-        // ---- Blue header like dynamicSpot Pro ----
-        LinearLayout header = new LinearLayout(this);
-        header.setOrientation(LinearLayout.VERTICAL);
-        header.setBackgroundColor(0xFF0B7FA8);
-        header.setPadding(dp(22), dp(26), dp(22), dp(24));
-        root.addView(header, new ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-
-        LinearLayout headerTop = new LinearLayout(this);
-        headerTop.setOrientation(LinearLayout.HORIZONTAL);
-        headerTop.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        header.addView(headerTop);
-
-        LinearLayout headerTexts = new LinearLayout(this);
-        headerTexts.setOrientation(LinearLayout.VERTICAL);
-        LinearLayout.LayoutParams htlp = new LinearLayout.LayoutParams(0,
-                ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-        headerTop.addView(headerTexts, htlp);
+        root.setPadding(dp(20), dp(34), dp(20), dp(30));
 
         TextView title = new TextView(this);
         title.setText("游龙灵动岛");
-        title.setTextSize(32);
-        title.setTextColor(0xFFFFFFFF);
+        title.setTextSize(28);
+        title.setTextColor(0xFF111114);
         title.setTypeface(android.graphics.Typeface.create(
                 "sans-serif-medium", android.graphics.Typeface.BOLD));
-        headerTexts.addView(title);
+        root.addView(title);
 
-        headerStatus = new TextView(this);
-        headerStatus.setTextSize(13);
-        headerStatus.setTextColor(0xCCFFFFFF);
-        headerStatus.setPadding(0, dp(6), 0, 0);
-        headerTexts.addView(headerStatus);
+        TextView sub = new TextView(this);
+        sub.setText("bata【严禁外传】");
+        sub.setTextSize(13);
+        sub.setTextColor(0xFF8A8A93);
+        sub.setPadding(0, dp(5), 0, dp(18));
+        root.addView(sub);
 
-        headerPlay = new TextView(this);
-        headerPlay.setText("▶");
-        headerPlay.setTextSize(24);
-        headerPlay.setTextColor(0xFFFFFFFF);
-        headerPlay.setGravity(android.view.Gravity.CENTER);
-        GradientDrawable playBg = new GradientDrawable();
-        playBg.setColor(0x33FFFFFF);
-        playBg.setShape(GradientDrawable.OVAL);
-        headerPlay.setBackground(playBg);
-        headerPlay.setLayoutParams(new LinearLayout.LayoutParams(dp(52), dp(52)));
-        headerPlay.setOnClickListener(v -> toggleMasterFromHeader());
-        headerTop.addView(headerPlay);
-
-        // ---- Menu rows ----
         LinearLayout menu = new LinearLayout(this);
         menu.setOrientation(LinearLayout.VERTICAL);
-        menu.setPadding(dp(18), dp(6), dp(18), dp(24));
         root.addView(menu);
 
-        LinearLayout masterRow = addMenuRow(menu, "灵动岛", "通知 / 充电 / 音量 / 解锁",
-                0xFF26A69A, R.drawable.ic_menu_notif, true, null);
-        masterSwitch = (android.widget.Switch) masterRow.getChildAt(2);
+        LinearLayout masterRow = addMenuRow(menu, "灵动岛", "通知 / 充电 / 音量 / 解锁", true, null);
+        masterSwitch = (android.widget.Switch) masterRow.getChildAt(1);
         masterSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (updatingTopSwitches) return;
             setMasterEnabled(isChecked);
         });
 
-        addMenuRow(menu, "通用", "显示设置和互动",
-                0xFFC0A020, R.drawable.ic_menu_general, false,
+        addMenuRow(menu, "通用", "显示设置和互动", false,
                 () -> openCategory(SettingsCategoryActivity.CATEGORY_GENERAL));
-        addMenuRow(menu, "外观", "尺寸、圆角和样式",
-                0xFF43A047, R.drawable.ic_menu_appearance, false,
+        addMenuRow(menu, "外观", "尺寸、圆角和样式", false,
                 () -> openCategory(SettingsCategoryActivity.CATEGORY_APPEARANCE));
-        addMenuRow(menu, "位置", "更改大小和位置",
-                0xFF4CAF50, R.drawable.ic_menu_position, false,
+        addMenuRow(menu, "位置", "更改大小和位置", false,
                 () -> openCategory(SettingsCategoryActivity.CATEGORY_POSITION));
 
-        LinearLayout permRow = addMenuRow(menu, "权限", "点击逐项授权",
-                0xFF3F51B5, R.drawable.ic_menu_permission, false,
+        LinearLayout permRow = addMenuRow(menu, "权限", "点击逐项授权", false,
                 () -> startActivity(new Intent(this, PermissionActivity.class)));
-        // subtitle TextView is child 1 of the text column which is child 1 of the row
         permissionRowSub = (TextView) ((LinearLayout) permRow.getChildAt(1)).getChildAt(1);
 
         TextView footer = new TextView(this);
-        footer.setText("bata【严禁外传】\n开启前请先在「权限」中逐项授权。");
+        footer.setText("开启前请先在「权限」中逐项授权。");
         footer.setTextSize(12);
         footer.setTextColor(0xFF8A8A93);
-        footer.setPadding(dp(18), dp(2), dp(18), dp(26));
+        footer.setPadding(0, dp(24), 0, dp(4));
         root.addView(footer);
 
         scroll.addView(root, new ViewGroup.LayoutParams(
@@ -168,31 +132,14 @@ public class MainActivity extends Activity {
         startActivity(i);
     }
 
-    /**
-     * v8.63: one dynamicSpot-style menu row: round coloured icon, title/subtitle and either a
-     * Switch or a chevron. Returns the row so callers can grab the switch.
-     */
+    /** v8.66: plain list row — no icon, matching the requested icon-free settings layout. */
     private LinearLayout addMenuRow(LinearLayout parent, String titleText, String subText,
-                                    int color, int iconRes, boolean withSwitch, Runnable click) {
+                                    boolean withSwitch, Runnable click) {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        row.setPadding(0, dp(18), dp(4), dp(18));
+        row.setPadding(dp(6), dp(20), dp(6), dp(20));
         row.setBackgroundColor(0xFFFFFFFF);
-
-        android.widget.ImageView icon = new android.widget.ImageView(this);
-        GradientDrawable circle = new GradientDrawable();
-        circle.setShape(GradientDrawable.OVAL);
-        circle.setColor(color);
-        icon.setBackground(circle);
-        icon.setImageResource(iconRes);
-        icon.setColorFilter(0xFFFFFFFF);
-        icon.setScaleType(android.widget.ImageView.ScaleType.CENTER_INSIDE);
-        int iconBox = dp(64);
-        LinearLayout.LayoutParams ilp = new LinearLayout.LayoutParams(iconBox, iconBox);
-        ilp.rightMargin = dp(20);
-        icon.setPadding(dp(15), dp(15), dp(15), dp(15));
-        row.addView(icon, ilp);
 
         LinearLayout texts = new LinearLayout(this);
         texts.setOrientation(LinearLayout.VERTICAL);
@@ -204,8 +151,6 @@ public class MainActivity extends Activity {
         title.setText(titleText);
         title.setTextSize(22);
         title.setTextColor(0xFF1A1A1F);
-        title.setTypeface(android.graphics.Typeface.create(
-                "sans-serif", android.graphics.Typeface.NORMAL));
         texts.addView(title);
 
         TextView sub = new TextView(this);
@@ -235,44 +180,9 @@ public class MainActivity extends Activity {
 
         View divider = new View(this);
         divider.setBackgroundColor(0xFFEDEEF2);
-        LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(1));
-        dlp.leftMargin = dp(84);
-        parent.addView(divider, dlp);
+        parent.addView(divider, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(1)));
         return row;
-    }
-
-    private void toggleMasterFromHeader() {
-        boolean on = prefs.getBoolean("enabled", false) || IslandService.isRunning();
-        if (on) {
-            setMasterEnabled(false);
-        } else if (!hasRequiredPermissions()) {
-            toastText("请先在权限页逐项授权，返回后再开启灵动岛");
-            startActivity(new Intent(this, PermissionActivity.class));
-        } else {
-            setMasterEnabled(true);
-        }
-    }
-
-    private void setMasterEnabled(boolean on) {
-        if (!on) {
-            prefs.edit().putBoolean("enabled", false).apply();
-            stopIslandServices();
-            refresh();
-            return;
-        }
-        if (!hasRequiredPermissions()) {
-            updatingTopSwitches = true;
-            if (masterSwitch != null) masterSwitch.setChecked(false);
-            updatingTopSwitches = false;
-            toastText("请先在权限页逐项授权，返回后再开启灵动岛");
-            startActivity(new Intent(this, PermissionActivity.class));
-            return;
-        }
-        prefs.edit().putBoolean("enabled", true).apply();
-        stopIslandServices();
-        startSelectedService();
-        refresh();
     }
 
     private boolean ensureService() {
@@ -321,16 +231,25 @@ public class MainActivity extends Activity {
         IslandService.start(this, null);
     }
 
-    private void updateTopPermissionState() {
-        if (topPermissionText == null) return;
-        int done = 0;
-        if (Settings.canDrawOverlays(this) || isAccessibilityAccessEnabled()) done++;
-        if (isNotificationAccessEnabled()) done++;
-        if (Build.VERSION.SDK_INT < 33
-                || checkSelfPermission("android.permission.POST_NOTIFICATIONS")
-                        == PackageManager.PERMISSION_GRANTED) done++;
-        topPermissionText.setText(done + "/3\n点击授权");
-        topPermissionText.setTextColor(done >= 3 ? 0xFF2E9E5B : 0xFF2563EB);
+    private void setMasterEnabled(boolean on) {
+        if (!on) {
+            prefs.edit().putBoolean("enabled", false).apply();
+            stopIslandServices();
+            refresh();
+            return;
+        }
+        if (!hasRequiredPermissions()) {
+            updatingTopSwitches = true;
+            if (masterSwitch != null) masterSwitch.setChecked(false);
+            updatingTopSwitches = false;
+            toastText("请先在权限页逐项授权，返回后再开启灵动岛");
+            startActivity(new Intent(this, PermissionActivity.class));
+            return;
+        }
+        prefs.edit().putBoolean("enabled", true).apply();
+        stopIslandServices();
+        startSelectedService();
+        refresh();
     }
 
     private TextView categoryTitle(String text) {
@@ -567,25 +486,11 @@ public class MainActivity extends Activity {
         boolean notif = isNotificationAccessEnabled();
         boolean running = IslandService.isRunning();
         boolean a11y = isAccessibilityAccessEnabled();
-        if (statusView != null) {
-            statusView.setText("悬浮窗权限：" + (overlay ? "已授予" : "未授予")
-                    + "\n通知使用权：" + (notif ? "已授予" : "未授予（计时器/音乐需要）")
-                    + "\n无障碍增强：" + (a11y ? "已开启（岛显示在状态栏上方）" : "未开启（可选）")
-                    + "\n灵动岛服务：" + (running ? "运行中" : "未运行"));
-            statusView.setTextColor((overlay || a11y) && running ? 0xFF2E9E5B : 0xFF33333A);
-        }
         if (masterSwitch != null) {
             updatingTopSwitches = true;
             masterSwitch.setChecked(prefs.getBoolean("enabled", false)
                     || IslandService.isRunning());
             updatingTopSwitches = false;
-        }
-        updateTopPermissionState();
-        if (headerStatus != null) {
-            headerStatus.setText("bata【严禁外传】 · " + (running ? "运行中" : "未运行"));
-        }
-        if (headerPlay != null) {
-            headerPlay.setText(running ? "■" : "▶");
         }
         if (permissionRowSub != null) {
             int done = 0;

@@ -37,6 +37,11 @@
             android:exported="false"
             android:launchMode="singleTop" />
 
+        <activity
+            android:name=".OnboardingActivity"
+            android:exported="false"
+            android:launchMode="singleTop" />
+
         <service
             android:name=".IslandService"
             android:exported="false"
