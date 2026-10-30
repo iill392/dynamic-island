@@ -155,11 +155,13 @@ public class OnboardingActivity extends Activity {
         boolean runtime = Build.VERSION.SDK_INT < 33
                 || checkSelfPermission("android.permission.POST_NOTIFICATIONS")
                         == android.content.pm.PackageManager.PERMISSION_GRANTED;
-        int done = (overlay || a11y ? 1 : 0) + (notif ? 1 : 0) + (runtime ? 1 : 0);
+        boolean battery = isIgnoringBatteryOptimizations();
+        int done = (overlay ? 1 : 0) + (a11y ? 1 : 0) + (notif ? 1 : 0)
+                + (runtime ? 1 : 0) + (battery ? 1 : 0);
         permissionSummary.setText(en
-                ? "Required: " + done + "/3" + (done >= 3 ? " · complete" : " · grant all to continue")
-                : "必需权限：" + done + "/3" + (done >= 3 ? " · 已完成" : " · 全部授权后才能继续"));
-        permissionSummary.setTextColor(done >= 3 ? 0xFF2E9E5B : 0xFFB45309);
+                ? "Required: " + done + "/5" + (done >= 5 ? " · complete" : " · grant all to continue")
+                : "必需权限：" + done + "/5" + (done >= 5 ? " · 已完成" : " · 全部授权后才能继续"));
+        permissionSummary.setTextColor(done >= 5 ? 0xFF2E9E5B : 0xFFB45309);
 
         addPermissionRow(en ? "Display over other apps" : "悬浮窗权限",
                 en ? "Draw the island above other apps" : "让灵动岛显示在其他应用上方",
@@ -170,6 +172,12 @@ public class OnboardingActivity extends Activity {
         addPermissionRow(en ? "Notification permission" : "通知权限",
                 en ? "Android 13+ foreground-service notification" : "Android 13+ 允许前台服务通知",
                 runtime, this::requestNotifications);
+        addPermissionRow(en ? "Accessibility enhancement" : "无障碍增强",
+                en ? "Keep the island above the status bar" : "让灵动岛显示在状态栏上方",
+                a11y, this::openAccessibility);
+        addPermissionRow(en ? "Ignore battery optimization" : "忽略电池优化",
+                en ? "Prevent the system from killing the overlay" : "避免系统清理灵动岛后台",
+                battery, this::openBatteryOptimization);
 
         LinearLayout nav = new LinearLayout(this);
         nav.setOrientation(LinearLayout.HORIZONTAL);
@@ -185,13 +193,14 @@ public class OnboardingActivity extends Activity {
         nav.addView(back, new LinearLayout.LayoutParams(0, dp(50), 1f));
 
         Button finish = primaryButton(en ? "Finish" : "完成并进入", v -> {
-            boolean okOverlay = Settings.canDrawOverlays(OnboardingActivity.this)
-                    || isAccessibilityAccessEnabled();
+            boolean okOverlay = Settings.canDrawOverlays(OnboardingActivity.this);
+            boolean okA11y = isAccessibilityAccessEnabled();
             boolean okNotif = isNotificationAccessEnabled();
             boolean okRuntime = Build.VERSION.SDK_INT < 33
                     || checkSelfPermission("android.permission.POST_NOTIFICATIONS")
                             == android.content.pm.PackageManager.PERMISSION_GRANTED;
-            if (!okOverlay || !okNotif || !okRuntime) {
+            boolean okBattery = isIgnoringBatteryOptimizations();
+            if (!okOverlay || !okA11y || !okNotif || !okRuntime || !okBattery) {
                 android.widget.Toast.makeText(OnboardingActivity.this,
                         en ? "Grant all required permissions first"
                                 : "请先完成所有必需权限",
@@ -208,10 +217,10 @@ public class OnboardingActivity extends Activity {
             startActivity(i);
             finish();
         });
-        finish.setEnabled(done >= 3);
-        finish.setText(en ? (done >= 3 ? "Finish" : "Grant all permissions")
-                : (done >= 3 ? "完成并进入" : "请先完成权限"));
-        finish.setAlpha(done >= 3 ? 1f : 0.45f);
+        finish.setEnabled(done >= 5);
+        finish.setText(en ? (done >= 5 ? "Finish" : "Grant all permissions")
+                : (done >= 5 ? "完成并进入" : "请先完成权限"));
+        finish.setAlpha(done >= 5 ? 1f : 0.45f);
         LinearLayout.LayoutParams flp = new LinearLayout.LayoutParams(0, dp(50), 1f);
         flp.leftMargin = dp(10);
         nav.addView(finish, flp);
@@ -343,6 +352,29 @@ public class OnboardingActivity extends Activity {
 
     private void openNotificationAccess() {
         openSettings("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS");
+    }
+
+    private void openAccessibility() {
+        openSettings(Settings.ACTION_ACCESSIBILITY_SETTINGS);
+    }
+
+    private void openBatteryOptimization() {
+        try {
+            startActivity(new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                    Uri.parse("package:" + getPackageName())));
+        } catch (Exception e) {
+            openSettings(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
+        }
+    }
+
+    private boolean isIgnoringBatteryOptimizations() {
+        try {
+            android.os.PowerManager pm =
+                    (android.os.PowerManager) getSystemService(Context.POWER_SERVICE);
+            return pm != null && pm.isIgnoringBatteryOptimizations(getPackageName());
+        } catch (Throwable t) {
+            return false;
+        }
     }
 
     private void openSettings(String action) {

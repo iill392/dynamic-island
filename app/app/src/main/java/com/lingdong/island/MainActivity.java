@@ -215,12 +215,24 @@ public class MainActivity extends Activity {
 
     /** v8.62: required before the master switch may be turned on. */
     private boolean hasRequiredPermissions() {
-        boolean base = Settings.canDrawOverlays(this) || isAccessibilityAccessEnabled();
+        boolean overlay = Settings.canDrawOverlays(this);
+        boolean accessibility = isAccessibilityAccessEnabled();
         boolean notif = isNotificationAccessEnabled();
         boolean runtime = Build.VERSION.SDK_INT < 33
                 || checkSelfPermission("android.permission.POST_NOTIFICATIONS")
                         == PackageManager.PERMISSION_GRANTED;
-        return base && notif && runtime;
+        boolean battery = isIgnoringBatteryOptimizations();
+        return overlay && accessibility && notif && runtime && battery;
+    }
+
+    private boolean isIgnoringBatteryOptimizations() {
+        try {
+            android.os.PowerManager pm =
+                    (android.os.PowerManager) getSystemService(POWER_SERVICE);
+            return pm != null && pm.isIgnoringBatteryOptimizations(getPackageName());
+        } catch (Throwable t) {
+            return false;
+        }
     }
 
     private void stopIslandServices() {
@@ -494,14 +506,16 @@ public class MainActivity extends Activity {
         }
         if (permissionRowSub != null) {
             int done = 0;
-            if (overlay || a11y) done++;
+            if (overlay) done++;
+            if (a11y) done++;
             if (notif) done++;
             if (Build.VERSION.SDK_INT < 33
                     || checkSelfPermission("android.permission.POST_NOTIFICATIONS")
                             == PackageManager.PERMISSION_GRANTED) done++;
-            permissionRowSub.setText(done + "/3 已授权"
-                    + (done >= 3 ? " · 已完成" : " · 点击逐项授权"));
-            permissionRowSub.setTextColor(done >= 3 ? 0xFF2E9E5B : 0xFF7A7A84);
+            if (isIgnoringBatteryOptimizations()) done++;
+            permissionRowSub.setText(done + "/5 已授权"
+                    + (done >= 5 ? " · 已完成" : " · 点击逐项授权"));
+            permissionRowSub.setTextColor(done >= 5 ? 0xFF2E9E5B : 0xFF7A7A84);
         }
     }
 

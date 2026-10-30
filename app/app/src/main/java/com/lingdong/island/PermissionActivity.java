@@ -126,17 +126,18 @@ public class PermissionActivity extends Activity {
         boolean runtimeNotif = Build.VERSION.SDK_INT < 33
                 || checkSelfPermission("android.permission.POST_NOTIFICATIONS")
                         == android.content.pm.PackageManager.PERMISSION_GRANTED;
+        boolean battery = isIgnoringBatteryOptimizations();
 
-        int requiredDone = (overlay || a11y ? 1 : 0)
-                + (notificationAccess ? 1 : 0)
-                + (runtimeNotif ? 1 : 0);
-        summary.setText("必需权限：" + requiredDone + "/3"
-                + (requiredDone >= 3 ? " · 已全部授权" : " · 还差 " + (3 - requiredDone) + " 项"));
-        summary.setTextColor(requiredDone >= 3 ? 0xFF2E9E5B : 0xFFB45309);
+        int requiredDone = (overlay ? 1 : 0) + (a11y ? 1 : 0)
+                + (notificationAccess ? 1 : 0) + (runtimeNotif ? 1 : 0)
+                + (battery ? 1 : 0);
+        summary.setText("必需权限：" + requiredDone + "/5"
+                + (requiredDone >= 5 ? " · 已全部授权" : " · 还差 " + (5 - requiredDone) + " 项"));
+        summary.setTextColor(requiredDone >= 5 ? 0xFF2E9E5B : 0xFFB45309);
         if (doneButton != null) {
-            doneButton.setEnabled(requiredDone >= 3);
-            doneButton.setAlpha(requiredDone >= 3 ? 1f : 0.45f);
-            doneButton.setText(requiredDone >= 3 ? "完成，返回软件" : "请先完成必需权限");
+            doneButton.setEnabled(requiredDone >= 5);
+            doneButton.setAlpha(requiredDone >= 5 ? 1f : 0.45f);
+            doneButton.setText(requiredDone >= 5 ? "完成，返回软件" : "请先完成必需权限");
         }
 
         addRow("悬浮窗权限（必需）",
@@ -148,12 +149,12 @@ public class PermissionActivity extends Activity {
         addRow("通知权限（必需）",
                 "Android 13+ 允许灵动岛服务发送前台通知",
                 runtimeNotif, true, this::requestNotificationPermission);
-        addRow("无障碍增强（可选）",
-                "让灵动岛显示在状态栏上方；不开启也可用悬浮窗",
-                a11y, false, this::openAccessibility);
-        addRow("忽略电池优化（可选）",
+        addRow("无障碍增强（必需）",
+                "让灵动岛显示在状态栏上方",
+                a11y, true, this::openAccessibility);
+        addRow("忽略电池优化（必需）",
                 "减少后台被杀，提升常驻稳定性",
-                isIgnoringBatteryOptimizations(), false, this::openBatteryOptimization);
+                battery, true, this::openBatteryOptimization);
     }
 
     private void addRow(String title, String desc, boolean granted, boolean required,
@@ -236,12 +237,13 @@ public class PermissionActivity extends Activity {
     }
 
     private boolean hasAllRequired() {
-        boolean overlay = Settings.canDrawOverlays(this) || isAccessibilityAccessEnabled();
-        boolean notificationAccess = isNotificationAccessEnabled();
-        boolean runtimeNotif = Build.VERSION.SDK_INT < 33
-                || checkSelfPermission("android.permission.POST_NOTIFICATIONS")
-                        == android.content.pm.PackageManager.PERMISSION_GRANTED;
-        return overlay && notificationAccess && runtimeNotif;
+        return Settings.canDrawOverlays(this)
+                && isAccessibilityAccessEnabled()
+                && isNotificationAccessEnabled()
+                && (Build.VERSION.SDK_INT < 33
+                    || checkSelfPermission("android.permission.POST_NOTIFICATIONS")
+                            == android.content.pm.PackageManager.PERMISSION_GRANTED)
+                && isIgnoringBatteryOptimizations();
     }
 
     private boolean isIgnoringBatteryOptimizations() {        try {
@@ -282,7 +284,12 @@ public class PermissionActivity extends Activity {
     }
 
     private void openBatteryOptimization() {
-        openSettings(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
+        try {
+            startActivity(new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                    Uri.parse("package:" + getPackageName())));
+        } catch (Exception e) {
+            openSettings(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
+        }
     }
 
     private void openSettings(String action) {
