@@ -135,9 +135,10 @@ public class OnboardingActivity extends Activity {
     private void showPermissions() {
         if (content == null) return;
         content.removeAllViews();
+        boolean en = "en".equals(language);
 
         TextView title = new TextView(this);
-        title.setText("配置权限 / Permissions");
+        title.setText(en ? "Permissions" : "配置权限");
         title.setTextSize(22);
         title.setTextColor(0xFF1A1A1F);
         title.setTypeface(Typeface.DEFAULT_BOLD);
@@ -155,16 +156,20 @@ public class OnboardingActivity extends Activity {
                 || checkSelfPermission("android.permission.POST_NOTIFICATIONS")
                         == android.content.pm.PackageManager.PERMISSION_GRANTED;
         int done = (overlay || a11y ? 1 : 0) + (notif ? 1 : 0) + (runtime ? 1 : 0);
-        permissionSummary.setText("必需权限：" + done + "/3"
-                + (done >= 3 ? " · 已完成" : " · 请逐项授权"));
+        permissionSummary.setText(en
+                ? "Required: " + done + "/3" + (done >= 3 ? " · complete" : " · grant all to continue")
+                : "必需权限：" + done + "/3" + (done >= 3 ? " · 已完成" : " · 全部授权后才能继续"));
         permissionSummary.setTextColor(done >= 3 ? 0xFF2E9E5B : 0xFFB45309);
 
-        addPermissionRow("悬浮窗权限 / Overlay",
-                "让灵动岛显示在其他应用上方", overlay, this::openOverlaySettings);
-        addPermissionRow("通知使用权 / Notification access",
-                "读取通知、计时器与音乐状态", notif, this::openNotificationAccess);
-        addPermissionRow("通知权限 / Notifications",
-                "Android 13+ 允许前台服务通知", runtime, this::requestNotifications);
+        addPermissionRow(en ? "Display over other apps" : "悬浮窗权限",
+                en ? "Draw the island above other apps" : "让灵动岛显示在其他应用上方",
+                overlay, this::openOverlaySettings);
+        addPermissionRow(en ? "Notification access" : "通知使用权",
+                en ? "Read notifications, timer and music state" : "读取通知、计时器与音乐状态",
+                notif, this::openNotificationAccess);
+        addPermissionRow(en ? "Notification permission" : "通知权限",
+                en ? "Android 13+ foreground-service notification" : "Android 13+ 允许前台服务通知",
+                runtime, this::requestNotifications);
 
         LinearLayout nav = new LinearLayout(this);
         nav.setOrientation(LinearLayout.HORIZONTAL);
@@ -173,13 +178,13 @@ public class OnboardingActivity extends Activity {
         nlp.topMargin = dp(20);
         nav.setLayoutParams(nlp);
 
-        Button back = secondaryButton("上一步 / Back", v -> {
+        Button back = secondaryButton(en ? "Back" : "上一步", v -> {
             step = STEP_LANGUAGE;
             showStep();
         });
         nav.addView(back, new LinearLayout.LayoutParams(0, dp(50), 1f));
 
-        Button finish = primaryButton("完成并进入 / Finish", v -> {
+        Button finish = primaryButton(en ? "Finish" : "完成并进入", v -> {
             boolean okOverlay = Settings.canDrawOverlays(OnboardingActivity.this)
                     || isAccessibilityAccessEnabled();
             boolean okNotif = isNotificationAccessEnabled();
@@ -188,7 +193,9 @@ public class OnboardingActivity extends Activity {
                             == android.content.pm.PackageManager.PERMISSION_GRANTED;
             if (!okOverlay || !okNotif || !okRuntime) {
                 android.widget.Toast.makeText(OnboardingActivity.this,
-                        "请先完成所有必需权限", android.widget.Toast.LENGTH_SHORT).show();
+                        en ? "Grant all required permissions first"
+                                : "请先完成所有必需权限",
+                        android.widget.Toast.LENGTH_SHORT).show();
                 showPermissions();
                 return;
             }
@@ -201,6 +208,10 @@ public class OnboardingActivity extends Activity {
             startActivity(i);
             finish();
         });
+        finish.setEnabled(done >= 3);
+        finish.setText(en ? (done >= 3 ? "Finish" : "Grant all permissions")
+                : (done >= 3 ? "完成并进入" : "请先完成权限"));
+        finish.setAlpha(done >= 3 ? 1f : 0.45f);
         LinearLayout.LayoutParams flp = new LinearLayout.LayoutParams(0, dp(50), 1f);
         flp.leftMargin = dp(10);
         nav.addView(finish, flp);
@@ -234,7 +245,8 @@ public class OnboardingActivity extends Activity {
         Button b = new Button(this);
         b.setAllCaps(false);
         b.setTextSize(14);
-        b.setText(granted ? "已授权 / Granted" : "去授权 / Grant");
+        boolean en = "en".equals(language);
+        b.setText(granted ? (en ? "Granted" : "已授权") : (en ? "Grant" : "去授权"));
         b.setEnabled(!granted);
         b.setTextColor(granted ? 0xFF2E9E5B : 0xFF2563EB);
         GradientDrawable bg = new GradientDrawable();

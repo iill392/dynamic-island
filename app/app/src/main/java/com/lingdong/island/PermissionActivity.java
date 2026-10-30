@@ -31,6 +31,7 @@ public class PermissionActivity extends Activity {
     private static final int REQ_NOTIF = 20;
     private LinearLayout content;
     private TextView summary;
+    private Button doneButton;
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -88,6 +89,7 @@ public class PermissionActivity extends Activity {
         root.addView(content);
 
         Button done = new Button(this);
+        doneButton = done;
         done.setText("完成，返回软件");
         done.setAllCaps(false);
         done.setTextSize(15);
@@ -100,7 +102,15 @@ public class PermissionActivity extends Activity {
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(50));
         dlp.topMargin = dp(18);
         done.setLayoutParams(dlp);
-        done.setOnClickListener(v -> finish());
+        done.setOnClickListener(v -> {
+            if (!hasAllRequired()) {
+                android.widget.Toast.makeText(this, "请先完成所有必需权限",
+                        android.widget.Toast.LENGTH_SHORT).show();
+                populate();
+                return;
+            }
+            finish();
+        });
         root.addView(done);
 
         setContentView(scroll);
@@ -123,6 +133,11 @@ public class PermissionActivity extends Activity {
         summary.setText("必需权限：" + requiredDone + "/3"
                 + (requiredDone >= 3 ? " · 已全部授权" : " · 还差 " + (3 - requiredDone) + " 项"));
         summary.setTextColor(requiredDone >= 3 ? 0xFF2E9E5B : 0xFFB45309);
+        if (doneButton != null) {
+            doneButton.setEnabled(requiredDone >= 3);
+            doneButton.setAlpha(requiredDone >= 3 ? 1f : 0.45f);
+            doneButton.setText(requiredDone >= 3 ? "完成，返回软件" : "请先完成必需权限");
+        }
 
         addRow("悬浮窗权限（必需）",
                 "让灵动岛显示在其他应用和状态栏上方",
@@ -220,8 +235,16 @@ public class PermissionActivity extends Activity {
         return !TextUtils.isEmpty(flat) && flat.contains(getPackageName());
     }
 
-    private boolean isIgnoringBatteryOptimizations() {
-        try {
+    private boolean hasAllRequired() {
+        boolean overlay = Settings.canDrawOverlays(this) || isAccessibilityAccessEnabled();
+        boolean notificationAccess = isNotificationAccessEnabled();
+        boolean runtimeNotif = Build.VERSION.SDK_INT < 33
+                || checkSelfPermission("android.permission.POST_NOTIFICATIONS")
+                        == android.content.pm.PackageManager.PERMISSION_GRANTED;
+        return overlay && notificationAccess && runtimeNotif;
+    }
+
+    private boolean isIgnoringBatteryOptimizations() {        try {
             PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
             return pm != null && pm.isIgnoringBatteryOptimizations(getPackageName());
         } catch (Throwable t) {

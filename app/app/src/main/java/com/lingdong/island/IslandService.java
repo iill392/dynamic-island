@@ -430,6 +430,15 @@ public class IslandService extends Service implements IslandBus.NotificationSink
                     break;
                 case ACTION_REFRESH:
                     loadVisibilityPrefs();
+                    boolean wantVertical = isLandscapeNow();
+                    if (view != null && view.isVerticalLandscape() != wantVertical) {
+                        view.setVerticalLandscape(wantVertical);
+                        if (attached) {
+                            detachOverlay();
+                            int wantMode = desiredMode();
+                            if (wantMode != IslandView.MODE_HIDDEN) attachOverlay(wantMode);
+                        }
+                    }
                     AlarmScheduler.schedule(this);
                     if (lp != null && attached) {
                         applyWindowPlacement(lp);
@@ -631,6 +640,7 @@ public class IslandService extends Service implements IslandBus.NotificationSink
 
     private void buildView() {
         view = new IslandView(this);
+        view.setVerticalLandscape(isLandscapeNow());
         view.setCallback(new IslandView.Callback() {
             /** v3.3: the callback also carries the vertical fraction for the notification card. */
             @Override public void onIslandTap(float xFraction, float yFraction) {
@@ -896,6 +906,11 @@ public class IslandService extends Service implements IslandBus.NotificationSink
         ensureWindow(targetMode, true);
     }
 
+    private boolean isLandscapeNow() {
+        return getResources().getConfiguration().orientation
+                == Configuration.ORIENTATION_LANDSCAPE;
+    }
+
     /**
      * v8.64: optional landscape camera-follow placement.
      *
@@ -940,19 +955,25 @@ public class IslandService extends Service implements IslandBus.NotificationSink
                 : getResources().getDisplayMetrics().heightPixels;
         float cardW = Math.max(1f, view.getCardWidth());
         float cardH = Math.max(1f, view.getCardHeight());
+        boolean vertical = view.isVerticalLandscape();
+        float footprintW = vertical ? cardH : cardW;
+        float footprintH = vertical ? cardW : cardH;
         float margin = 8f * (IslandSpec.DENSITY > 0f ? IslandSpec.DENSITY : 3f);
 
         float centerX = best.centerX();
-        float half = cardW / 2f + margin;
+        float half = footprintW / 2f + margin;
         if (half * 2f < screenW) {
             centerX = Math.max(half, Math.min(screenW - half, centerX));
         }
         float desiredTop = best.bottom + margin;
-        float maxTop = Math.max(0f, screenH - cardH - margin);
+        float maxTop = Math.max(0f, screenH - footprintH - margin);
         desiredTop = Math.max(0f, Math.min(maxTop, desiredTop));
 
         params.x = Math.round(centerX - screenW / 2f);
-        cameraFollowWindowY = Math.round(desiredTop - IslandSpec.cardTop());
+        // In vertical mode the card is centred inside its window and rotated; the window top is
+        // already the desired visual top. In horizontal mode cardTop is the in-window top offset.
+        cameraFollowWindowY = Math.round(vertical ? desiredTop
+                : desiredTop - IslandSpec.cardTop());
         params.y = cameraFollowWindowY;
     }
 
