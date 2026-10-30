@@ -168,9 +168,18 @@ public class OnboardingActivity extends Activity {
                 en ? (a11y ? "Accessibility is enabled · open settings"
                         : "Open accessibility settings (required)")
                         : (a11y ? "无障碍已开启 · 打开设置"
-                        : "打开无障碍设置（必需）"),
+                        : "打开无障碍设置（必须开启）"),
                 v -> openAccessibility());
         content.addView(a11yShortcut);
+
+        TextView a11yWarning = new TextView(this);
+        a11yWarning.setText(en
+                ? "Accessibility is REQUIRED. The guide cannot continue until it is enabled."
+                : "无障碍权限为必须项，未开启无法进入下一步。");
+        a11yWarning.setTextSize(12);
+        a11yWarning.setTextColor(0xFFD14343);
+        a11yWarning.setPadding(dp(4), 0, 0, dp(10));
+        content.addView(a11yWarning);
 
         addPermissionRow(en ? "Display over other apps" : "悬浮窗权限",
                 en ? "Draw the island above other apps" : "让灵动岛显示在其他应用上方",
@@ -181,10 +190,10 @@ public class OnboardingActivity extends Activity {
         addPermissionRow(en ? "Notification permission" : "通知权限",
                 en ? "Android 13+ foreground-service notification" : "Android 13+ 允许前台服务通知",
                 runtime, this::requestNotifications);
-        addPermissionRow(en ? "Accessibility permission" : "无障碍权限（必需）",
+        addPermissionRow(en ? "Accessibility permission (required)" : "无障碍权限（必须开启）",
                 en ? "Enable the accessibility service for this app" : "开启本应用的无障碍服务",
                 a11y, this::openAccessibility);
-        addPermissionRow(en ? "Ignore battery optimization" : "忽略电池优化",
+        addPermissionRow(en ? "Ignore battery optimization (required)" : "忽略电池优化（必须开启）",
                 en ? "Prevent the system from killing the overlay" : "避免系统清理灵动岛后台",
                 battery, this::openBatteryOptimization);
 

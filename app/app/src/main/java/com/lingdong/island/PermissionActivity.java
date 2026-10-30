@@ -85,7 +85,7 @@ public class PermissionActivity extends Activity {
         root.addView(summary);
 
         Button a11yShortcut = new Button(this);
-        a11yShortcut.setText("打开无障碍设置（必需）");
+        a11yShortcut.setText("打开无障碍设置（必须开启）");
         a11yShortcut.setAllCaps(false);
         a11yShortcut.setTextSize(15);
         a11yShortcut.setTextColor(0xFF2563EB);
@@ -166,10 +166,10 @@ public class PermissionActivity extends Activity {
         addRow("通知权限（必需）",
                 "Android 13+ 允许灵动岛服务发送前台通知",
                 runtimeNotif, true, this::requestNotificationPermission);
-        addRow("无障碍增强（必需）",
-                "让灵动岛显示在状态栏上方",
+        addRow("无障碍权限（必须开启）",
+                "让灵动岛显示在状态栏上方；未开启无法开启灵动岛",
                 a11y, true, this::openAccessibility);
-        addRow("忽略电池优化（必需）",
+        addRow("忽略电池优化（必须开启）",
                 "减少后台被杀，提升常驻稳定性",
                 battery, true, this::openBatteryOptimization);
     }

@@ -355,7 +355,7 @@ public class SettingsCategoryActivity extends Activity {
 
     private boolean ensureService() {
         if (!Settings.canDrawOverlays(this) && !isAccessibilityEnabled()) {
-            toast("请先在权限页授予悬浮窗或无障碍权限");
+            toast("请先在权限页授予悬浮窗和无障碍权限");
             startActivity(new Intent(this, PermissionActivity.class));
             return false;
         }
