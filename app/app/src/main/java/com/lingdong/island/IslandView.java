@@ -51,6 +51,9 @@ public class IslandView extends View {
 
         /** v8.70: drag on the expanded music progress row. fraction 0..1 of the track. */
         void onMusicSeek(float fraction, boolean finished);
+
+        /** v8.75: long-press on a collapsed music capsule opens the source music app. */
+        void onMusicLongPress();
     }
 
     public static final int MODE_HIDDEN = 0;
@@ -251,6 +254,18 @@ public class IslandView extends View {
     private boolean swipeDismiss;
     /** v8.70: dragging the expanded music progress row. */
     private boolean musicSeeking;
+    /** v8.75: long-press on a collapsed music capsule. */
+    private boolean musicLongPressTriggered;
+    private final Runnable musicLongPressRunnable = new Runnable() {
+        @Override public void run() {
+            if (!touchTracking || swipeDismiss || musicSeeking) return;
+            if (mode != MODE_MUSIC_COMPACT || callback == null) return;
+            musicLongPressTriggered = true;
+            touchTapCandidate = false;
+            performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+            callback.onMusicLongPress();
+        }
+    };
 
     // one-shot delayed redraw used by the ticking texts (timer digits / playback clock)
     private boolean slowRefreshPosted;
@@ -1296,6 +1311,8 @@ public class IslandView extends View {
         touchStartedInside = false;
         swipeDismiss = false;
         musicSeeking = false;
+        musicLongPressTriggered = false;
+        removeCallbacks(musicLongPressRunnable);
         endPress();
     }
 
@@ -1347,6 +1364,12 @@ public class IslandView extends View {
             touchTracking = true;
             touchStartedInside = true;
             swipeDismiss = false;
+            removeCallbacks(musicLongPressRunnable);
+            musicLongPressTriggered = false;
+            if (mode == MODE_MUSIC_COMPACT) {
+                postDelayed(musicLongPressRunnable,
+                        android.view.ViewConfiguration.getLongPressTimeout());
+            }
             if (mode == MODE_MUSIC_EXPANDED && cardH > 0f && cardW > 0f && callback != null) {
                 float xf = Math.max(0f, Math.min(1f, (e.getX() - left) / cardW));
                 float yf = Math.max(0f, Math.min(1f, (e.getY() - top) / cardH));
@@ -1370,6 +1393,7 @@ public class IslandView extends View {
                 if (callback != null) callback.onMusicSeek(musicSeekFraction(xf), false);
                 return true;
             }
+            if (musicLongPressTriggered) return true;
             if (touchStartedInside && !swipeDismiss) {
                 float dx = e.getX() - touchDownX;
                 float dy = touchDownY - e.getY();   // positive = moving up
@@ -1377,6 +1401,7 @@ public class IslandView extends View {
                 if (dy > swipeDismissPx && Math.abs(dx) <= Math.abs(dy) * 1.2f) {
                     swipeDismiss = true;
                     touchTapCandidate = false;
+                    removeCallbacks(musicLongPressRunnable);
                     return true;
                 }
             }
@@ -1384,6 +1409,7 @@ public class IslandView extends View {
             if (Math.abs(e.getX() - touchDownX) > touchSlop
                     || Math.abs(e.getY() - touchDownY) > touchSlop) {
                 touchTapCandidate = false;
+                removeCallbacks(musicLongPressRunnable);
             }
             return true;   // consume the stream: the gesture is handled here, not as a tap
         }
@@ -1396,9 +1422,11 @@ public class IslandView extends View {
                 resetTouchGesture();
                 return true;
             }
+            boolean longPressed = musicLongPressTriggered;
             boolean swipe = swipeDismiss;
             boolean tap = touchTapCandidate;
             resetTouchGesture();
+            if (longPressed) return true;
             if (swipe) {
                 if (callback != null) callback.onIslandSwipeUp();
                 return true;

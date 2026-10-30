@@ -656,6 +656,13 @@ public class IslandService extends Service implements IslandBus.NotificationSink
             @Override public void onMusicSeek(float fraction, boolean finished) {
                 seekMusicTo(fraction);
             }
+
+            /** v8.75: long-press a collapsed music capsule -> open its source app. */
+            @Override public void onMusicLongPress() {
+                if (view != null && view.getMode() == IslandView.MODE_MUSIC_COMPACT) {
+                    openMusicSourceApp();
+                }
+            }
         });
         // S2: a brand new IslandView starts with default models (00:01 / Unknown track / no cover),
         // so backfill everything the service already knows before the window is attached.
@@ -2892,18 +2899,7 @@ public class IslandService extends Service implements IslandBus.NotificationSink
                 }
                 // v5.1: tap anywhere on the expanded music card except its button row opens the
                 // source music app; then leave a compact playing pill behind.
-                String musicPkg = music.packageName;
-                if ((musicPkg == null || musicPkg.isEmpty()) && controller != null) {
-                    try { musicPkg = controller.getPackageName(); } catch (Throwable ignored) {}
-                }
-                boolean opened = launchApp(musicPkg);
-                if (!opened) {
-                    // The preview has no associated app; a real player may also expose no launcher.
-                    android.widget.Toast.makeText(this,
-                            demoMode == 3 ? "预览模式没有关联应用，请用真实音乐 App 测试"
-                                    : "无法打开对应的音乐应用",
-                            android.widget.Toast.LENGTH_SHORT).show();
-                }
+                openMusicSourceApp();
                 view.collapseToCompact(IslandView.MODE_MUSIC_COMPACT);
                 break;
             case IslandView.MODE_NOTIF_EXPANDED:
@@ -3152,6 +3148,23 @@ public class IslandService extends Service implements IslandBus.NotificationSink
     }
 
     /** S8: map the tap to the same five button centres IslandView draws, or -1 if none. */
+    /** v8.75: open the current music source app; shared by expanded-card tap and compact long-press. */
+    private boolean openMusicSourceApp() {
+        String pkg = music.packageName;
+        MediaController controller = mediaController;
+        if ((pkg == null || pkg.isEmpty()) && controller != null) {
+            try { pkg = controller.getPackageName(); } catch (Throwable ignored) {}
+        }
+        boolean opened = launchApp(pkg);
+        if (!opened) {
+            android.widget.Toast.makeText(this,
+                    demoMode == 3 ? "预览模式没有关联应用，请用真实音乐 App 测试"
+                            : "无法打开对应的音乐应用",
+                    android.widget.Toast.LENGTH_SHORT).show();
+        }
+        return opened;
+    }
+
     /** v8.70: map the drag fraction to a real MediaController seek and update the view immediately. */
     private void seekMusicTo(float fraction) {
         if (music.durationMs <= 0) return;
