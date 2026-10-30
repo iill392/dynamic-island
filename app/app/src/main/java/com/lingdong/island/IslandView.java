@@ -83,26 +83,9 @@ public class IslandView extends View {
     private IslandData.NotificationItem notification = new IslandData.NotificationItem();
     private boolean ringerSilent;
 
-    /** v8.64: current animated card size, used for camera-follow placement/clamping. */
+    /** v8.64: current animated card size. */
     public float getCardWidth() { return cardW; }
     public float getCardHeight() { return cardH; }
-    /** v8.69: landscape camera-follow mode draws the whole island rotated 90°. */
-    private boolean verticalLandscape;
-
-    public void setVerticalLandscape(boolean on) {
-        if (verticalLandscape == on) return;
-        verticalLandscape = on;
-        invalidate();
-    }
-
-    public boolean isVerticalLandscape() { return verticalLandscape; }
-
-    private float effectiveCardTop() {
-        if (verticalLandscape && getHeight() > 0) {
-            return (getHeight() - cardH) / 2f;
-        }
-        return cardTop;
-    }
 
     private boolean unlockAnimating;
     private long unlockElapsedMs;
@@ -744,14 +727,6 @@ public class IslandView extends View {
                 w = IslandSpec.HC * DOT; h = w; break;
         }
         float shadow = SHADOW_PAD_DP * IslandSpec.DENSITY;
-        if (verticalLandscape) {
-            // Rotated 90°: use a square window large enough for both the unrotated card and its
-            // rotated screen footprint, so drawing and touch coordinates stay inside the view.
-            float side = Math.max(w, h);
-            int win = Math.round((side + 2f * shadow) * SPRING_HEADROOM);
-            if (IslandSpec.SCREEN_H > 0f) win = Math.min(win, Math.round(IslandSpec.SCREEN_H));
-            return new int[]{Math.max(1, win), Math.max(1, win)};
-        }
         int winW = Math.round((w + 2f * shadow) * SPRING_HEADROOM);
         if (IslandSpec.W > 0f) winW = Math.min(winW, Math.round(IslandSpec.W));
         int winH = Math.round(IslandSpec.cardTop() + (h + 2f * shadow) * SPRING_HEADROOM);
@@ -1311,16 +1286,6 @@ public class IslandView extends View {
             if (mode != MODE_HIDDEN && callback != null) callback.onIslandOutsideTap();
             return true;
         }
-        if (verticalLandscape && getWidth() > 0 && getHeight() > 0) {
-            // The canvas is rotated +90°, so map the screen touch back into the card space.
-            MotionEvent mapped = MotionEvent.obtain(e);
-            android.graphics.Matrix matrix = new android.graphics.Matrix();
-            matrix.setRotate(-90f, getWidth() / 2f, getHeight() / 2f);
-            mapped.transform(matrix);
-            boolean handled = super.dispatchTouchEvent(mapped);
-            mapped.recycle();
-            return handled;
-        }
         return super.dispatchTouchEvent(e);
     }
 
@@ -1460,19 +1425,9 @@ public class IslandView extends View {
     @Override protected void onDraw(Canvas canvas) {
         if (getWidth() <= 0) return;
         float cx = getWidth() / 2f;
-        if (verticalLandscape && getHeight() > 0) {
-            cardTop = (getHeight() - cardH) / 2f;
-        }
         float left = cx - cardW / 2f;
         float top = cardTop;
         cardRect.set(left, top, left + cardW, top + cardH);
-
-        // v8.69: landscape camera-follow mode draws the whole capsule rotated 90°.
-        int rotateSave = -1;
-        if (verticalLandscape) {
-            rotateSave = canvas.save();
-            canvas.rotate(90f, cx, getHeight() / 2f);
-        }
 
         clipPath.reset();
         clipPath.addRoundRect(cardRect, radius, radius, Path.Direction.CW);
@@ -1498,7 +1453,6 @@ public class IslandView extends View {
         }
         canvas.restore();
         if (pressSave >= 0) canvas.restoreToCount(pressSave);
-        if (rotateSave >= 0) canvas.restoreToCount(rotateSave);
 
         afterDraw();
     }

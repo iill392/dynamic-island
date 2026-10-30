@@ -217,9 +217,8 @@ public class IslandService extends Service implements IslandBus.NotificationSink
     private boolean showRinger = true;
     private boolean showUnlock = true;
     private boolean showLock = true;
-    /** v8.64: in landscape, optionally place the island below the camera cutout. */
-    private boolean cameraFollow;
-    private int cameraFollowWindowY;
+    /** v8.74: hide the whole island while the device is in landscape (optional switch). */
+    private boolean landscapeAutoHide;
     private boolean wasPlugged;
     /** v8.40: battery status can lag one tick behind ACTION_POWER_CONNECTED; do not hide the
      * charging island immediately when the first BATTERY_CHANGED still says NOT_CHARGING. */
@@ -430,21 +429,7 @@ public class IslandService extends Service implements IslandBus.NotificationSink
                     break;
                 case ACTION_REFRESH:
                     loadVisibilityPrefs();
-                    boolean wantVertical = isLandscapeNow();
-                    if (view != null && view.isVerticalLandscape() != wantVertical) {
-                        view.setVerticalLandscape(wantVertical);
-                        if (attached) {
-                            detachOverlay();
-                            int wantMode = desiredMode();
-                            if (wantMode != IslandView.MODE_HIDDEN) attachOverlay(wantMode);
-                        }
-                    }
                     AlarmScheduler.schedule(this);
-                    if (lp != null && attached) {
-                        applyWindowPlacement(lp);
-                        updateWindowLayout();
-                        schedulePositionCorrection();
-                    }
                     if (notifActive && !showNotifications) dismissNotificationIsland();
                     if (chargingActive && !showCharging) endChargingNow();
                     if (!showVolume) volumeActive = false;
@@ -640,7 +625,6 @@ public class IslandService extends Service implements IslandBus.NotificationSink
 
     private void buildView() {
         view = new IslandView(this);
-        view.setVerticalLandscape(isLandscapeNow());
         view.setCallback(new IslandView.Callback() {
             /** v3.3: the callback also carries the vertical fraction for the notification card. */
             @Override public void onIslandTap(float xFraction, float yFraction) {
@@ -772,7 +756,6 @@ public class IslandService extends Service implements IslandBus.NotificationSink
         lp.width = size[0];
         lp.height = size[1];
         lp.y = 0;
-        applyWindowPlacement(lp);
         winW = size[0];
         winH = size[1];
         lp.setTitle("Island");
@@ -885,7 +868,7 @@ public class IslandService extends Service implements IslandBus.NotificationSink
             if (laidOut && view.getWindowToken() != null) {
                 int[] loc = new int[2];
                 view.getLocationOnScreen(loc);
-                int error = loc[1] - cameraFollowWindowY;
+                int error = loc[1];
                 int absError = Math.abs(error);
                 // Adjust only when it is worth doing (still off by >1px and the residual is not
                 // getting worse, so a ROM that clamps the window cannot push us further and
@@ -915,72 +898,6 @@ public class IslandService extends Service implements IslandBus.NotificationSink
     private boolean isLandscapeNow() {
         return getResources().getConfiguration().orientation
                 == Configuration.ORIENTATION_LANDSCAPE;
-    }
-
-    /**
-     * v8.64: optional landscape camera-follow placement.
-     *
-     * Normal mode keeps the centre-top position (lp.x/lp.y = 0). In camera-follow mode, if the
-     * device is landscape and exposes a display cutout, the island is moved horizontally below
-     * that cutout (left/right camera notch in landscape) and clamped so the card stays on-screen.
-     */
-    private void applyWindowPlacement(WindowManager.LayoutParams params) {
-        if (params == null) return;
-        params.x = 0;
-        params.y = 0;
-        cameraFollowWindowY = 0;
-        if (!cameraFollow || view == null) return;
-        Configuration cfg = getResources().getConfiguration();
-        if (cfg.orientation != Configuration.ORIENTATION_LANDSCAPE) return;
-        if (Build.VERSION.SDK_INT < 29) return;
-
-        Display display = null;
-        try {
-            DisplayManager dm = (DisplayManager) getSystemService(DISPLAY_SERVICE);
-            if (dm != null) display = dm.getDisplay(Display.DEFAULT_DISPLAY);
-        } catch (Throwable ignored) {}
-        if (display == null) return;
-        DisplayCutout cutout = null;
-        try { cutout = display.getCutout(); } catch (Throwable ignored) {}
-        if (cutout == null) return;
-        Rect best = null;
-        for (Rect r : cutout.getBoundingRects()) {
-            if (r == null || r.width() <= 0 || r.height() <= 0) continue;
-            if (best == null || (long) r.width() * r.height()
-                    > (long) best.width() * best.height()) {
-                best = new Rect(r);
-            }
-        }
-        if (best == null) return;
-
-        android.util.DisplayMetrics metrics = new android.util.DisplayMetrics();
-        try { display.getRealMetrics(metrics); } catch (Throwable ignored) {}
-        int screenW = metrics.widthPixels > 0 ? metrics.widthPixels
-                : getResources().getDisplayMetrics().widthPixels;
-        int screenH = metrics.heightPixels > 0 ? metrics.heightPixels
-                : getResources().getDisplayMetrics().heightPixels;
-        float cardW = Math.max(1f, view.getCardWidth());
-        float cardH = Math.max(1f, view.getCardHeight());
-        boolean vertical = view.isVerticalLandscape();
-        float footprintW = vertical ? cardH : cardW;
-        float footprintH = vertical ? cardW : cardH;
-        float margin = 8f * (IslandSpec.DENSITY > 0f ? IslandSpec.DENSITY : 3f);
-
-        float centerX = best.centerX();
-        float half = footprintW / 2f + margin;
-        if (half * 2f < screenW) {
-            centerX = Math.max(half, Math.min(screenW - half, centerX));
-        }
-        float desiredTop = best.bottom + margin;
-        float maxTop = Math.max(0f, screenH - footprintH - margin);
-        desiredTop = Math.max(0f, Math.min(maxTop, desiredTop));
-
-        params.x = Math.round(centerX - screenW / 2f);
-        // In vertical mode the card is centred inside its window and rotated; the window top is
-        // already the desired visual top. In horizontal mode cardTop is the in-window top offset.
-        cameraFollowWindowY = Math.round(vertical ? desiredTop
-                : desiredTop - IslandSpec.cardTop());
-        params.y = cameraFollowWindowY;
     }
 
     /**
@@ -2686,10 +2603,12 @@ public class IslandService extends Service implements IslandBus.NotificationSink
         showRinger = p.getBoolean("show_ringer", true);
         showUnlock = p.getBoolean("show_unlock", true);
         showLock = p.getBoolean("show_lock", true);
-        cameraFollow = p.getBoolean("landscape_camera_follow", false);
+        landscapeAutoHide = p.getBoolean("landscape_auto_hide", false);
     }
 
     private int desiredMode() {
+        // v8.74: optional landscape auto-hide (default centre-top horizontal otherwise).
+        if (landscapeAutoHide && isLandscapeNow()) return IslandView.MODE_HIDDEN;
         // v8.53: the unlock playback owns the island until it ends — even a preview/demo or a
         // newly arrived notification/charge/volume HUD must wait.
         if (unlockAnimating || unlockHold) return IslandView.MODE_UNLOCK;
@@ -2853,10 +2772,6 @@ public class IslandService extends Service implements IslandBus.NotificationSink
         view.ensureCompactContentVisible();
         repairNotificationContentIfBlank("settle");
         ensureWindow(view.getMode(), true);
-        if (cameraFollow && lp != null) {
-            applyWindowPlacement(lp);
-            updateWindowLayout();
-        }
         handler.post(() -> recomputeState(false));
     }
 
