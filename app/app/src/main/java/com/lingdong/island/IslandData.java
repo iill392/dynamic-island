@@ -107,6 +107,8 @@ public final class IslandData {
         public Bitmap appIcon;
         public int accent = IslandSpec.MUSIC_GLOW_DEFAULT;
         public boolean playing = true;
+        /** v8.70: local favorite/heart state (media sessions have no standard like action). */
+        public boolean favorite;
         public long positionMs;
         public long positionAtUptime;
         public long durationMs;

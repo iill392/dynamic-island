@@ -48,6 +48,9 @@ public class IslandView extends View {
 
         /** v3.2: the user swiped up on the island - collapse/dismiss it. */
         void onIslandSwipeUp();
+
+        /** v8.70: drag on the expanded music progress row. fraction 0..1 of the track. */
+        void onMusicSeek(float fraction, boolean finished);
     }
 
     public static final int MODE_HIDDEN = 0;
@@ -263,6 +266,8 @@ public class IslandView extends View {
     private boolean touchTracking;
     private boolean touchStartedInside;
     private boolean swipeDismiss;
+    /** v8.70: dragging the expanded music progress row. */
+    private boolean musicSeeking;
 
     // one-shot delayed redraw used by the ticking texts (timer digits / playback clock)
     private boolean slowRefreshPosted;
@@ -1325,7 +1330,13 @@ public class IslandView extends View {
         touchTapCandidate = false;
         touchStartedInside = false;
         swipeDismiss = false;
+        musicSeeking = false;
         endPress();
+    }
+
+    private float musicSeekFraction(float xf) {
+        float f = (xf - 0.161f) / (0.844f - 0.161f);
+        return Math.max(0f, Math.min(1f, f));
     }
 
     private void beginPress() {
@@ -1371,12 +1382,29 @@ public class IslandView extends View {
             touchTracking = true;
             touchStartedInside = true;
             swipeDismiss = false;
+            if (mode == MODE_MUSIC_EXPANDED && cardH > 0f && cardW > 0f && callback != null) {
+                float xf = Math.max(0f, Math.min(1f, (e.getX() - left) / cardW));
+                float yf = Math.max(0f, Math.min(1f, (e.getY() - top) / cardH));
+                if (yf >= 0.49f && yf <= 0.62f && xf >= 0.10f && xf <= 0.92f) {
+                    musicSeeking = true;
+                    touchTapCandidate = false;
+                    callback.onMusicSeek(musicSeekFraction(xf), false);
+                    return true;
+                }
+            }
             // v6.1: the always-on idle capsule gets a small "press grows" feedback.
             if (mode == MODE_IDLE) beginPress();
             return true;
         }
         if (!touchTracking) return false;
         if (action == MotionEvent.ACTION_MOVE) {
+            if (musicSeeking) {
+                float left = getWidth() / 2f - cardW / 2f;
+                float xf = cardW > 0f
+                        ? Math.max(0f, Math.min(1f, (e.getX() - left) / cardW)) : 0.5f;
+                if (callback != null) callback.onMusicSeek(musicSeekFraction(xf), false);
+                return true;
+            }
             if (touchStartedInside && !swipeDismiss) {
                 float dx = e.getX() - touchDownX;
                 float dy = touchDownY - e.getY();   // positive = moving up
@@ -1395,6 +1423,14 @@ public class IslandView extends View {
             return true;   // consume the stream: the gesture is handled here, not as a tap
         }
         if (action == MotionEvent.ACTION_UP) {
+            if (musicSeeking) {
+                float left = getWidth() / 2f - cardW / 2f;
+                float xf = cardW > 0f
+                        ? Math.max(0f, Math.min(1f, (e.getX() - left) / cardW)) : 0.5f;
+                if (callback != null) callback.onMusicSeek(musicSeekFraction(xf), true);
+                resetTouchGesture();
+                return true;
+            }
             boolean swipe = swipeDismiss;
             boolean tap = touchTapCandidate;
             resetTouchGesture();
@@ -2014,7 +2050,8 @@ public class IslandView extends View {
         drawIcon(canvas, ICON_NEXT, left + cw * xs[3], ctrlY, iconSize,
                 withAlpha(IslandSpec.TEXT_WHITE, (int) (255 * alpha)));
         drawIcon(canvas, ICON_HEART, left + cw * xs[4], ctrlY, heartSize,
-                withAlpha(IslandSpec.TEXT_WHITE, (int) (255 * alpha)));
+                withAlpha(music.favorite ? 0xFFFF4D6D : IslandSpec.TEXT_WHITE,
+                        (int) (255 * alpha)));
         canvas.restoreToCount(layerSave);
     }
 

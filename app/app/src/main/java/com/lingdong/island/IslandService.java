@@ -667,6 +667,11 @@ public class IslandService extends Service implements IslandBus.NotificationSink
             @Override public void onIslandSwipeUp() {
                 if (view != null && view.isExpanded()) collapseExpanded();
             }
+
+            /** v8.70: dragging the music seek row. */
+            @Override public void onMusicSeek(float fraction, boolean finished) {
+                seekMusicTo(fraction);
+            }
         });
         // S2: a brand new IslandView starts with default models (00:01 / Unknown track / no cover),
         // so backfill everything the service already knows before the window is attached.
@@ -714,6 +719,7 @@ public class IslandService extends Service implements IslandBus.NotificationSink
         vm.appIcon = music.appIcon;
         vm.accent = music.accent;
         vm.playing = music.playing;
+        vm.favorite = music.favorite;
         vm.positionMs = music.positionMs;
         vm.positionAtUptime = music.positionAtUptime;
         vm.durationMs = music.durationMs;
@@ -2957,8 +2963,15 @@ public class IslandService extends Service implements IslandBus.NotificationSink
                         else if (button == 2) {
                             if (music.playing) tc.pause(); else tc.play();
                         } else if (button == 3) tc.skipToNext();
-                        // 0 (app icon) and 4 (heart) have no action yet: swallow the tap instead of
-                        // collapsing the card.
+                        else if (button == 4) {
+                            music.favorite = !music.favorite;
+                            syncModelsToView();
+                            if (view != null) view.invalidate();
+                            android.widget.Toast.makeText(this,
+                                    music.favorite ? "已收藏" : "已取消收藏",
+                                    android.widget.Toast.LENGTH_SHORT).show();
+                        }
+                        // 0 (app icon) has no action: swallow the tap instead of collapsing.
                         return;
                     }
                 }
@@ -3224,6 +3237,26 @@ public class IslandService extends Service implements IslandBus.NotificationSink
     }
 
     /** S8: map the tap to the same five button centres IslandView draws, or -1 if none. */
+    /** v8.70: map the drag fraction to a real MediaController seek and update the view immediately. */
+    private void seekMusicTo(float fraction) {
+        if (music.durationMs <= 0) return;
+        float f = Math.max(0f, Math.min(1f, fraction));
+        long pos = (long) (music.durationMs * f);
+        music.positionMs = pos;
+        music.positionAtUptime = SystemClock.elapsedRealtime();
+        MediaController controller = mediaController;
+        if (controller != null) {
+            try {
+                controller.getTransportControls().seekTo(pos);
+            } catch (Throwable ignored) {}
+        }
+        syncModelsToView();
+        if (view != null) {
+            view.invalidate();
+            view.refreshFrame();
+        }
+    }
+
     private static int musicButtonAt(float fracX, float fracY) {
         // v5.1: only the actual control row counts as a button — tapping the title/cover/progress
         // area must fall through to "open the source app".
