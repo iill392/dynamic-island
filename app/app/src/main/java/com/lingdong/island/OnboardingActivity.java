@@ -166,19 +166,14 @@ public class OnboardingActivity extends Activity {
         permissionSummary.setTextColor(done >= 5 ? 0xFF2E9E5B : 0xFFB45309);
 
         addPermissionRow(en ? "Display over other apps" : "悬浮窗权限",
-                en ? "Draw the island above other apps" : "让灵动岛显示在其他应用上方",
                 overlay, this::openOverlaySettings);
         addPermissionRow(en ? "Notification access" : "通知使用权",
-                en ? "Read notifications, timer and music state" : "读取通知、计时器与音乐状态",
                 notif, this::openNotificationAccess);
         addPermissionRow(en ? "Notification permission" : "通知权限",
-                en ? "Android 13+ foreground-service notification" : "Android 13+ 允许前台服务通知",
                 runtime, this::requestNotifications);
         addPermissionRow(en ? "Accessibility permission (required)" : "无障碍权限（必须开启）",
-                en ? "Enable the accessibility service for this app" : "开启本应用的无障碍服务",
                 a11y, this::openAccessibility);
         addPermissionRow(en ? "Ignore battery optimization (required)" : "忽略电池优化（必须开启）",
-                en ? "Prevent the system from killing the overlay" : "避免系统清理灵动岛后台",
                 battery, this::openBatteryOptimization);
 
         LinearLayout nav = new LinearLayout(this);
@@ -229,14 +224,15 @@ public class OnboardingActivity extends Activity {
         content.addView(nav);
     }
 
-    private void addPermissionRow(String title, String desc, boolean granted, Runnable action) {
+    private void addPermissionRow(String title, boolean granted, Runnable action) {
         LinearLayout card = new LinearLayout(this);
-        card.setOrientation(LinearLayout.VERTICAL);
+        card.setOrientation(LinearLayout.HORIZONTAL);
+        card.setGravity(Gravity.CENTER_VERTICAL);
         card.setBackground(roundedBg(0xFFF7F8FA, 14));
-        card.setPadding(dp(16), dp(14), dp(16), dp(14));
+        card.setPadding(dp(16), dp(10), dp(12), dp(10));
         LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        clp.bottomMargin = dp(10);
+        clp.bottomMargin = dp(8);
         card.setLayoutParams(clp);
 
         TextView t = new TextView(this);
@@ -244,30 +240,25 @@ public class OnboardingActivity extends Activity {
         t.setTextSize(15);
         t.setTextColor(0xFF1F1F24);
         t.setTypeface(Typeface.DEFAULT_BOLD);
-        card.addView(t);
-
-        TextView d = new TextView(this);
-        d.setText(desc);
-        d.setTextSize(12);
-        d.setTextColor(0xFF7A7A84);
-        d.setPadding(0, dp(3), 0, dp(8));
-        card.addView(d);
+        t.setPadding(dp(12), 0, 0, 0);
 
         Button b = new Button(this);
         b.setAllCaps(false);
-        b.setTextSize(14);
+        b.setTextSize(13);
         boolean en = "en".equals(language);
         b.setText(granted ? (en ? "Granted" : "已授权") : (en ? "Grant" : "去授权"));
         b.setEnabled(!granted);
         b.setTextColor(granted ? 0xFF2E9E5B : 0xFF2563EB);
         GradientDrawable bg = new GradientDrawable();
         bg.setColor(granted ? 0xFFEAF7EF : 0xFFEFF4FF);
-        bg.setCornerRadius(dp(12));
+        bg.setCornerRadius(dp(19));
+        bg.setStroke(dp(1), granted ? 0xFFB7E4C7 : 0xFFCFE0FF);
         b.setBackground(bg);
-        b.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(44)));
+        b.setLayoutParams(new LinearLayout.LayoutParams(dp(94), dp(38)));
         b.setOnClickListener(v -> action.run());
         card.addView(b);
+        card.addView(t, new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         content.addView(card);
     }
 

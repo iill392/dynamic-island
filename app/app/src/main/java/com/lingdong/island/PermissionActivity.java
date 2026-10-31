@@ -140,32 +140,22 @@ public class PermissionActivity extends Activity {
             doneButton.setText(requiredDone >= 5 ? "完成，返回软件" : "请先完成必需权限");
         }
 
-        addRow("悬浮窗权限（必需）",
-                "让灵动岛显示在其他应用和状态栏上方",
-                overlay, true, this::openOverlaySettings);
-        addRow("通知使用权（必需）",
-                "读取通知、计时器与音乐播放状态",
-                notificationAccess, true, this::openNotificationAccess);
-        addRow("通知权限（必需）",
-                "Android 13+ 允许灵动岛服务发送前台通知",
-                runtimeNotif, true, this::requestNotificationPermission);
-        addRow("无障碍权限（必须开启）",
-                "让灵动岛显示在状态栏上方；未开启无法开启灵动岛",
-                a11y, true, this::openAccessibility);
-        addRow("忽略电池优化（必须开启）",
-                "减少后台被杀，提升常驻稳定性",
-                battery, true, this::openBatteryOptimization);
+        addRow("悬浮窗权限（必需）", overlay, this::openOverlaySettings);
+        addRow("通知使用权（必需）", notificationAccess, this::openNotificationAccess);
+        addRow("通知权限（必需）", runtimeNotif, this::requestNotificationPermission);
+        addRow("无障碍权限（必须开启）", a11y, this::openAccessibility);
+        addRow("忽略电池优化（必须开启）", battery, this::openBatteryOptimization);
     }
 
-    private void addRow(String title, String desc, boolean granted, boolean required,
-                        Runnable action) {
+    private void addRow(String title, boolean granted, Runnable action) {
         LinearLayout card = new LinearLayout(this);
-        card.setOrientation(LinearLayout.VERTICAL);
+        card.setOrientation(LinearLayout.HORIZONTAL);
+        card.setGravity(android.view.Gravity.CENTER_VERTICAL);
         card.setBackground(roundedBg(0xFFF7F7FA, 16, 0xFFE1E2E8));
-        card.setPadding(dp(16), dp(14), dp(16), dp(14));
+        card.setPadding(dp(16), dp(10), dp(12), dp(10));
         LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        clp.bottomMargin = dp(10);
+        clp.bottomMargin = dp(8);
         card.setLayoutParams(clp);
 
         TextView t = new TextView(this);
@@ -173,39 +163,24 @@ public class PermissionActivity extends Activity {
         t.setTextSize(15);
         t.setTextColor(0xFF1F1F24);
         t.setTypeface(Typeface.DEFAULT_BOLD);
-        card.addView(t);
-
-        TextView d = new TextView(this);
-        d.setText(desc);
-        d.setTextSize(12);
-        d.setTextColor(0xFF6B6B75);
-        d.setPadding(0, dp(3), 0, dp(8));
-        card.addView(d);
+        t.setPadding(dp(12), 0, 0, 0);
 
         Button b = new Button(this);
         b.setAllCaps(false);
-        b.setTextSize(14);
+        b.setTextSize(13);
         b.setText(granted ? "已授权" : "去授权");
         b.setEnabled(!granted);
         b.setTextColor(granted ? 0xFF2E9E5B : 0xFF2563EB);
         GradientDrawable bg = new GradientDrawable();
         bg.setColor(granted ? 0xFFEAF7EF : 0xFFEFF4FF);
-        bg.setCornerRadius(dp(12));
-        if (!granted) bg.setStroke(dp(1), 0xFFCFE0FF);
+        bg.setCornerRadius(dp(19));
+        bg.setStroke(dp(1), granted ? 0xFFB7E4C7 : 0xFFCFE0FF);
         b.setBackground(bg);
-        b.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(44)));
+        b.setLayoutParams(new LinearLayout.LayoutParams(dp(94), dp(38)));
         b.setOnClickListener(v -> action.run());
         card.addView(b);
-
-        if (!granted && required) {
-            TextView hint = new TextView(this);
-            hint.setText("此项为开启灵动岛的必需权限");
-            hint.setTextSize(11);
-            hint.setTextColor(0xFFB45309);
-            hint.setPadding(0, dp(6), 0, 0);
-            card.addView(hint);
-        }
+        card.addView(t, new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         content.addView(card);
     }
 
