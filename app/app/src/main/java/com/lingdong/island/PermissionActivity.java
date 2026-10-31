@@ -32,7 +32,6 @@ public class PermissionActivity extends Activity {
     private LinearLayout content;
     private TextView summary;
     private Button doneButton;
-    private Button a11yShortcutButton;
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -85,24 +84,6 @@ public class PermissionActivity extends Activity {
         summary.setPadding(0, dp(2), 0, dp(12));
         root.addView(summary);
 
-        Button a11yShortcut = new Button(this);
-        a11yShortcutButton = a11yShortcut;
-        a11yShortcut.setText("无障碍权限：未授权 · 去授权");
-        a11yShortcut.setAllCaps(false);
-        a11yShortcut.setTextSize(15);
-        a11yShortcut.setTextColor(0xFF2563EB);
-        GradientDrawable a11yBg = new GradientDrawable();
-        a11yBg.setColor(0xFFEFF4FF);
-        a11yBg.setCornerRadius(dp(14));
-        a11yBg.setStroke(dp(1), 0xFFCFE0FF);
-        a11yShortcut.setBackground(a11yBg);
-        LinearLayout.LayoutParams alp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(48));
-        alp.bottomMargin = dp(12);
-        a11yShortcut.setLayoutParams(alp);
-        a11yShortcut.setOnClickListener(v -> openAccessibility());
-        root.addView(a11yShortcut);
-
         content = new LinearLayout(this);
         content.setOrientation(LinearLayout.VERTICAL);
         root.addView(content);
@@ -153,11 +134,6 @@ public class PermissionActivity extends Activity {
         summary.setText("必需权限：" + requiredDone + "/5"
                 + (requiredDone >= 5 ? " · 已全部授权" : " · 还差 " + (5 - requiredDone) + " 项"));
         summary.setTextColor(requiredDone >= 5 ? 0xFF2E9E5B : 0xFFB45309);
-        if (a11yShortcutButton != null) {
-            a11yShortcutButton.setText(a11y
-                    ? "无障碍权限：已授权" : "无障碍权限：未授权 · 去授权");
-            a11yShortcutButton.setTextColor(a11y ? 0xFF2E9E5B : 0xFF2563EB);
-        }
         if (doneButton != null) {
             doneButton.setEnabled(requiredDone >= 5);
             doneButton.setAlpha(requiredDone >= 5 ? 1f : 0.45f);

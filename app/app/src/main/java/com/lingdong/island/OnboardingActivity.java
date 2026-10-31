@@ -165,25 +165,6 @@ public class OnboardingActivity extends Activity {
                 : "必需权限：" + done + "/5" + (done >= 5 ? " · 已完成" : " · 全部授权后才能继续"));
         permissionSummary.setTextColor(done >= 5 ? 0xFF2E9E5B : 0xFFB45309);
 
-        // v8.79: the accessibility shortcut also shows the same granted/not-granted state.
-        Button a11yShortcut = secondaryButton(
-                en ? (a11y ? "Accessibility permission: granted"
-                        : "Accessibility permission: not granted · Grant")
-                        : (a11y ? "无障碍权限：已授权"
-                        : "无障碍权限：未授权 · 去授权"),
-                v -> openAccessibility());
-        a11yShortcut.setTextColor(a11y ? 0xFF2E9E5B : 0xFF2563EB);
-        content.addView(a11yShortcut);
-
-        TextView a11yWarning = new TextView(this);
-        a11yWarning.setText(en
-                ? "Accessibility is REQUIRED. The guide cannot continue until it is enabled."
-                : "无障碍权限为必须项，未开启无法进入下一步。");
-        a11yWarning.setTextSize(12);
-        a11yWarning.setTextColor(0xFFD14343);
-        a11yWarning.setPadding(dp(4), 0, 0, dp(10));
-        content.addView(a11yWarning);
-
         addPermissionRow(en ? "Display over other apps" : "悬浮窗权限",
                 en ? "Draw the island above other apps" : "让灵动岛显示在其他应用上方",
                 overlay, this::openOverlaySettings);
