@@ -178,28 +178,6 @@ public class SettingsCategoryActivity extends Activity {
             toast("已恢复：所有应用的通知都会显示");
         });
 
-        root.addView(sectionLabel("服务与预览"));
-        addButton(root, "开启灵动岛", v -> {
-            prefs.edit().putBoolean("enabled", true).apply();
-            stopServices();
-            startSelected();
-        });
-        addButton(root, "关闭灵动岛", v -> {
-            prefs.edit().putBoolean("enabled", false).apply();
-            stopServices();
-        });
-        addButton(root, "充电效果预览", v -> {
-            ensureService();
-            if (IslandService.isRunning()) IslandService.start(this, IslandService.ACTION_DEMO_CHARGE);
-        });
-        addButton(root, "音乐效果预览", v -> {
-            ensureService();
-            if (IslandService.isRunning()) IslandService.start(this, IslandService.ACTION_DEMO_MUSIC);
-        });
-        addButton(root, "结束预览", v -> {
-            if (IslandService.isRunning()) IslandService.start(this, IslandService.ACTION_DEMO_HIDE);
-        });
-
         root.addView(sectionLabel("后台与保活"));
         CheckBox hideNotice = new CheckBox(this);
         hideNotice.setText("后台隐藏：尽量隐藏常驻通知");
@@ -338,19 +316,6 @@ public class SettingsCategoryActivity extends Activity {
             startActivity(new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
                     Uri.parse("package:" + getPackageName())));
         } catch (Throwable ignored) {}
-    }
-
-    private boolean ensureService() {
-        if (!Settings.canDrawOverlays(this) && !isAccessibilityEnabled()) {
-            toast("请先在权限页授予悬浮窗和无障碍权限");
-            startActivity(new Intent(this, PermissionActivity.class));
-            return false;
-        }
-        if (!IslandService.isRunning()) {
-            prefs.edit().putBoolean("enabled", true).apply();
-            startSelected();
-        }
-        return true;
     }
 
     private boolean isAccessibilityEnabled() {
