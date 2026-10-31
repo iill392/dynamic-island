@@ -96,7 +96,7 @@ public class MainActivity extends Activity {
         menu.setOrientation(LinearLayout.VERTICAL);
         root.addView(menu);
 
-        LinearLayout masterRow = addMenuRow(menu, "灵动岛", "通知 / 充电 / 音量 / 解锁", true, null);
+        LinearLayout masterRow = addMenuRow(menu, "灵动岛", "点击开启灵动岛", true, null);
         masterSwitch = (android.widget.Switch) masterRow.getChildAt(1);
         masterSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (updatingTopSwitches) return;

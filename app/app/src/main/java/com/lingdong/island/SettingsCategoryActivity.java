@@ -1,7 +1,6 @@
 package com.lingdong.island;
 
 import android.app.Activity;
-import android.app.AlarmManager;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -9,7 +8,6 @@ import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
@@ -161,6 +159,24 @@ public class SettingsCategoryActivity extends Activity {
         });
         root.addView(always);
 
+        CheckBox landscapeHide = new CheckBox(this);
+        landscapeHide.setText("横屏自动隐藏灵动岛");
+        landscapeHide.setTextSize(14);
+        landscapeHide.setTextColor(0xFF1F1F24);
+        landscapeHide.setChecked(prefs.getBoolean("landscape_auto_hide", false));
+        landscapeHide.setOnCheckedChangeListener((b, checked) -> {
+            prefs.edit().putBoolean("landscape_auto_hide", checked).apply();
+            refreshService();
+        });
+        root.addView(landscapeHide);
+
+        TextView landscapeHint = new TextView(this);
+        landscapeHint.setText("开启后手机横屏时完全隐藏，竖屏恢复显示。");
+        landscapeHint.setTextSize(11);
+        landscapeHint.setTextColor(0xFF8A8A93);
+        landscapeHint.setPadding(dp(4), 0, 0, dp(6));
+        root.addView(landscapeHint);
+
         root.addView(sectionLabel("显示哪些灵动岛"));
         addToggle(root, "来消息时显示", "show_notif", true);
         addToggle(root, "充电时显示", "show_charge", true);
@@ -177,45 +193,6 @@ public class SettingsCategoryActivity extends Activity {
             refreshService();
             toast("已恢复：所有应用的通知都会显示");
         });
-
-        root.addView(sectionLabel("后台与保活"));
-        CheckBox hideNotice = new CheckBox(this);
-        hideNotice.setText("后台隐藏：尽量隐藏常驻通知");
-        hideNotice.setTextSize(14);
-        hideNotice.setTextColor(0xFF1F1F24);
-        hideNotice.setChecked(prefs.getBoolean("hide_background_notice", false));
-        hideNotice.setOnCheckedChangeListener((b, checked) -> {
-            prefs.edit().putBoolean("hide_background_notice", checked).apply();
-            if (IslandService.isRunning()) {
-                boolean was = prefs.getBoolean("enabled", false);
-                stopServices();
-                if (was) startSelected();
-            }
-        });
-        root.addView(hideNotice);
-
-        TextView hideHint = new TextView(this);
-        hideHint.setText("Android 要求前台服务必须保留通知，这里只能尽量降低显示层级。");
-        hideHint.setTextSize(11);
-        hideHint.setTextColor(0xFF8A8A93);
-        hideHint.setPadding(dp(4), 0, 0, dp(6));
-        root.addView(hideHint);
-
-        CheckBox alarm = new CheckBox(this);
-        alarm.setText("闹钟保活：每 15 分钟唤醒并重启服务（防 LMK）");
-        alarm.setTextSize(14);
-        alarm.setTextColor(0xFF1F1F24);
-        alarm.setChecked(prefs.getBoolean("alarm_keepalive", false));
-        alarm.setOnCheckedChangeListener((b, checked) -> {
-            prefs.edit().putBoolean("alarm_keepalive", checked).apply();
-            if (checked) {
-                requestExactAlarmPermission();
-                AlarmScheduler.schedule(this);
-            } else {
-                AlarmScheduler.cancel(this);
-            }
-        });
-        root.addView(alarm);
     }
 
     // --------------------------------------------------------------- appearance
@@ -248,26 +225,6 @@ public class SettingsCategoryActivity extends Activity {
 
     // ----------------------------------------------------------------- position
     private void buildPosition(LinearLayout root) {
-        root.addView(sectionLabel("横屏显示"));
-        CheckBox autoHide = new CheckBox(this);
-        autoHide.setText("横屏自动隐藏灵动岛");
-        autoHide.setTextSize(14);
-        autoHide.setTextColor(0xFF1F1F24);
-        autoHide.setChecked(prefs.getBoolean("landscape_auto_hide", false));
-        autoHide.setOnCheckedChangeListener((b, checked) -> {
-            prefs.edit().putBoolean("landscape_auto_hide", checked).apply();
-            refreshService();
-        });
-        root.addView(autoHide);
-
-        TextView hint = new TextView(this);
-        hint.setText("开启后，手机横屏时灵动岛完全隐藏；竖屏恢复显示。默认关闭，横屏仍显示在屏幕顶部中间。");
-        hint.setTextSize(12);
-        hint.setTextColor(0xFF7A7A84);
-        hint.setLineSpacing(dp(2), 1f);
-        hint.setPadding(dp(4), dp(2), 0, dp(8));
-        root.addView(hint);
-
         root.addView(sectionLabel("垂直位置"));
         final TextView label = new TextView(this);
         label.setTextSize(13);
@@ -308,29 +265,11 @@ public class SettingsCategoryActivity extends Activity {
         IslandService.start(this, IslandService.ACTION_REFRESH);
     }
 
-    private void requestExactAlarmPermission() {
-        if (Build.VERSION.SDK_INT < 31) return;
-        try {
-            AlarmManager am = (AlarmManager) getSystemService(ALARM_SERVICE);
-            if (am != null && am.canScheduleExactAlarms()) return;
-            startActivity(new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
-                    Uri.parse("package:" + getPackageName())));
-        } catch (Throwable ignored) {}
-    }
-
     private boolean isAccessibilityEnabled() {
         if (IslandAccessibilityService.isConnected()) return true;
         String flat = Settings.Secure.getString(getContentResolver(),
                 "enabled_accessibility_services");
         return flat != null && flat.contains(getPackageName());
-    }
-
-    private void stopServices() {
-        stopService(new Intent(this, IslandService.class));
-    }
-
-    private void startSelected() {
-        IslandService.start(this, null);
     }
 
     private void addToggle(LinearLayout root, String title, String key, boolean def) {

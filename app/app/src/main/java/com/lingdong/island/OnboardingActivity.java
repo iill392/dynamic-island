@@ -165,13 +165,14 @@ public class OnboardingActivity extends Activity {
                 : "必需权限：" + done + "/5" + (done >= 5 ? " · 已完成" : " · 全部授权后才能继续"));
         permissionSummary.setTextColor(done >= 5 ? 0xFF2E9E5B : 0xFFB45309);
 
-        // v8.72: an explicit accessibility shortcut at the top so the button is always visible.
+        // v8.79: the accessibility shortcut also shows the same granted/not-granted state.
         Button a11yShortcut = secondaryButton(
-                en ? (a11y ? "Accessibility is enabled · open settings"
-                        : "Open accessibility settings (required)")
-                        : (a11y ? "无障碍已开启 · 打开设置"
-                        : "打开无障碍设置（必须开启）"),
+                en ? (a11y ? "Accessibility permission: granted"
+                        : "Accessibility permission: not granted · Grant")
+                        : (a11y ? "无障碍权限：已授权"
+                        : "无障碍权限：未授权 · 去授权"),
                 v -> openAccessibility());
+        a11yShortcut.setTextColor(a11y ? 0xFF2E9E5B : 0xFF2563EB);
         content.addView(a11yShortcut);
 
         TextView a11yWarning = new TextView(this);
