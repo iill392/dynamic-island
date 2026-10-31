@@ -12,7 +12,7 @@ public class KeepAliveReceiver extends BroadcastReceiver {
     @Override public void onReceive(Context context, Intent intent) {
         if (intent == null || !AlarmScheduler.ACTION_KEEPALIVE.equals(intent.getAction())) return;
         SharedPreferences p = context.getSharedPreferences("island", Context.MODE_PRIVATE);
-        if (!p.getBoolean("enabled", false) || !p.getBoolean("alarm_keepalive", false)) {
+        if (!p.getBoolean("enabled", false)) {
             AlarmScheduler.cancel(context);
             return;
         }

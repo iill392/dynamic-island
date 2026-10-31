@@ -34,6 +34,10 @@ public class IslandNotificationListener extends NotificationListenerService {
     private long lastTimerAutoStartMs;
     /** v8.10: lets the island check whether a notification is genuinely still posted. */
     private static volatile IslandNotificationListener sInstance;
+    /** v8.82: connection state + throttled watchdog rebind. */
+    private static volatile boolean sConnected;
+    private static volatile long sLastRebindRequestMs;
+    private static volatile long sLastProbeMs;
 
     @Override public void onCreate() {
         super.onCreate();
@@ -42,7 +46,54 @@ public class IslandNotificationListener extends NotificationListenerService {
 
     @Override public void onDestroy() {
         if (sInstance == this) sInstance = null;
+        sConnected = false;
         super.onDestroy();
+    }
+
+    static boolean isConnected() {
+        return sInstance != null && sConnected;
+    }
+
+    /**
+     * v8.82: recover from a notification-listener binder that died without delivering a new
+     * onListenerConnected callback. This is why users previously had to toggle notification
+     * access off/on before notifications appeared again.
+     */
+    static void ensureBound(Context context) {
+        if (isConnected()) {
+            // v8.82: periodically prove the binder is still alive. Some ROMs drop the listener
+            // binder without invoking onListenerDisconnected; toggling notification access was
+            // previously the only workaround.
+            long now = android.os.SystemClock.elapsedRealtime();
+            if (now - sLastProbeMs < 30_000L) return;
+            sLastProbeMs = now;
+            try {
+                IslandNotificationListener inst = sInstance;
+                if (inst != null) inst.getActiveNotifications();
+            } catch (Throwable t) {
+                Log.w(TAG, "notification-listener binder probe failed; rebinding", t);
+                sConnected = false;
+            }
+            if (isConnected()) return;
+        }
+        NotificationManager nm =
+                (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        try {
+            if (nm != null && !nm.isNotificationListenerAccessGranted(
+                    new ComponentName(context, IslandNotificationListener.class))) {
+                return;
+            }
+        } catch (Throwable ignored) {}
+        long now = android.os.SystemClock.elapsedRealtime();
+        if (now - sLastRebindRequestMs < 30_000L) return;
+        sLastRebindRequestMs = now;
+        try {
+            NotificationListenerService.requestRebind(
+                    new ComponentName(context, IslandNotificationListener.class));
+            Log.i(TAG, "watchdog requested notification-listener rebind");
+        } catch (Throwable t) {
+            Log.w(TAG, "watchdog rebind failed", t);
+        }
     }
 
     static boolean isNotificationActive(String key) {
@@ -90,6 +141,7 @@ public class IslandNotificationListener extends NotificationListenerService {
 
     @Override public void onListenerConnected() {
         super.onListenerConnected();
+        sConnected = true;
         rebindAttempts = 0;
         try {
             StatusBarNotification[] active = getActiveNotifications();
@@ -109,6 +161,7 @@ public class IslandNotificationListener extends NotificationListenerService {
 
     @Override public void onListenerDisconnected() {
         super.onListenerDisconnected();
+        sConnected = false;
         // S9: while disconnected we cannot observe removals, so replaying the old cache after the
         // rebind would resurrect a timer that the user already dismissed. Start from a clean slate;
         // onListenerConnected() re-reads the notifications that still exist.

@@ -78,6 +78,29 @@ adb install -r E:\voice\dist\灵动岛-debug.apk
 3. **窗口尺寸小优化**：展开态悬浮窗宽度由 1.156 屏宽钳制到 1 屏宽（卡片 0.98W 仍完整可见，超屏过冲本来就被屏幕裁掉），减少无谓的 surface 与触摸区域。
 4. **版本**：versionCode 5 / versionName 3.2（`dist/灵动岛-debug.apk`）。
 
+## v8.82 更新（通知使用权自动重连 + 多机制保活，2026-11-01）
+
+### 1. 通知不显示（需重开通知使用权）修复
+- 新增通知监听 watchdog：
+  - `IslandService` 启动、刷新、每轮 tick 检查；
+  - `IslandNotificationListener.ensureBound()` 检测监听服务是否断开；
+  - 监听 binder 断开/`getActiveNotifications()` 抛异常时，自动 `NotificationListenerService.requestRebind()`；
+  - 30 秒节流，避免频繁重绑；
+  - 不再需要用户手动关闭再打开通知使用权。
+
+### 2. 自动闹钟保活（无用户开关）
+- 删除用户选择逻辑：只要灵动岛主开关开启，就自动安排保活；
+- 不再依赖 `alarm_keepalive` 偏好。
+
+### 3. 多机制保活
+- **AlarmManager**：每 15 分钟一次，优先 `setExactAndAllowWhileIdle`，无精确闹钟权限回退 `setAndAllowWhileIdle`；
+- **JobScheduler**：新增 `KeepAliveJobService`，15 分钟周期、`setPersisted(true)`，开机后仍保留；
+- **前台服务**：`START_STICKY` + `onTaskRemoved()` 重新排程；
+- **BootReceiver**：开机/应用更新自动启动服务；
+- **KeepAliveReceiver**：闹钟触发后检查服务并重启；
+- 两层独立系统唤醒（Alarm + Job）+ 前台服务 + 开机广播，提高被 LMK/OEM 清理后的恢复率。
+
+版本：versionCode 129 / versionName 8.82，正式签名包 `dist/游龙灵动岛-v8.82-签名版.apk`。
 ## v8.81 更新（权限行压缩：去注释 + 左侧小按钮，2026-10-31）
 
 - 权限列表每一项删除下方说明/注释文字；
@@ -1656,6 +1679,7 @@ v5.3 的 k=110 手感偏慢，用户要求加快一点：
 - 未连接真机做最终手感调校；所有参数可按 `app/README.md` 的说明在 `IslandSpec.java` 一处微调。
 - 计时器依赖系统时钟 App 的通知格式（已做通用识别 + 关键字/包名/chronometer 多路判断），个别 ROM 可能需要补充包名。
 - 展开音乐卡片的五个按钮按录屏复原；其中上一首/暂停/下一首已接 MediaController 真实控制。
+
 
 
 

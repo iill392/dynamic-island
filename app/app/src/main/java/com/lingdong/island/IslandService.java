@@ -394,6 +394,7 @@ public class IslandService extends Service implements IslandBus.NotificationSink
         // only notifications that arrive after this point are allowed to pop on the island.
         serviceStartWallMs = System.currentTimeMillis();
         IslandBus.register(this);
+        IslandNotificationListener.ensureBound(this);
         setupMediaSessions();
         handler.post(ticker);
         // v6.0: when always-on was enabled before the service starts, show the idle capsule now
@@ -401,6 +402,12 @@ public class IslandService extends Service implements IslandBus.NotificationSink
         if (alwaysOn || locked) handler.post(() -> { if (!destroyed) recomputeState(true); });
         Log.i(TAG, "service created, screen=" + IslandSpec.W + "x" + IslandSpec.H
                 + " density=" + IslandSpec.DENSITY);
+    }
+
+    @Override public void onTaskRemoved(Intent rootIntent) {
+        // v8.82: keep the two independent wake-up paths armed even if the task is swiped away.
+        AlarmScheduler.schedule(this);
+        super.onTaskRemoved(rootIntent);
     }
 
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
@@ -430,6 +437,7 @@ public class IslandService extends Service implements IslandBus.NotificationSink
                 case ACTION_REFRESH:
                     loadVisibilityPrefs();
                     AlarmScheduler.schedule(this);
+                    IslandNotificationListener.ensureBound(this);
                     if (notifActive && !showNotifications) dismissNotificationIsland();
                     if (chargingActive && !showCharging) endChargingNow();
                     if (!showVolume) volumeActive = false;
@@ -3423,6 +3431,7 @@ public class IslandService extends Service implements IslandBus.NotificationSink
         }
         pollVolume();
         pollKeyguard();
+        IslandNotificationListener.ensureBound(this);
         if (demoMode != 0 && demoUntil > 0 && now > demoUntil) endDemo();
 
         // R-03: watchdog — the system may remove our window without telling us (a11y host killed,
