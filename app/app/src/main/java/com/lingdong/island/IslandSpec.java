@@ -53,7 +53,15 @@ public final class IslandSpec {
         COMPACT_H_MUL = pct(p, "geom_compact_h", 100, 70, 140);
         EXPANDED_W_MUL = pct(p, "geom_expanded_w", 100, 80, 120);
         EXPANDED_H_MUL = pct(p, "geom_expanded_h", 100, 70, 140);
-        RADIUS_MUL = pct(p, "geom_radius", 100, 60, 140);
+        // v8.78: new default expanded-card radius is 120%. Migrate installations that still
+        // have the old untouched default (100) once, without touching other customized values.
+        if (!p.getBoolean("geom_radius_default120", false)) {
+            int saved = p.getInt("geom_radius", 100);
+            SharedPreferences.Editor editor = p.edit();
+            if (saved == 100) editor.putInt("geom_radius", 120);
+            editor.putBoolean("geom_radius_default120", true).apply();
+        }
+        RADIUS_MUL = pct(p, "geom_radius", 120, 60, 140);
         IDLE_W_MUL = pct(p, "geom_idle_w", 100, 60, 200);
         IDLE_H_MUL = pct(p, "geom_idle_h", 100, 60, 160);
     }

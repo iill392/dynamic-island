@@ -226,7 +226,7 @@ public class SettingsCategoryActivity extends Activity {
         addPercentSlider(root, "紧凑胶囊高", "geom_compact_h", 100, 80, 130);
         addPercentSlider(root, "展开卡宽", "geom_expanded_w", 100, 85, 115);
         addPercentSlider(root, "展开卡高", "geom_expanded_h", 100, 80, 130);
-        addPercentSlider(root, "展开卡圆角", "geom_radius", 100, 70, 130);
+        addPercentSlider(root, "展开卡圆角", "geom_radius", 120, 70, 130);
         addPercentSlider(root, "常驻胶囊宽", "geom_idle_w", 100, 60, 200);
         addPercentSlider(root, "常驻胶囊高", "geom_idle_h", 100, 60, 160);
 
@@ -237,7 +237,7 @@ public class SettingsCategoryActivity extends Activity {
                     .putInt("geom_compact_h", 100)
                     .putInt("geom_expanded_w", 100)
                     .putInt("geom_expanded_h", 100)
-                    .putInt("geom_radius", 100)
+                    .putInt("geom_radius", 120)
                     .putInt("geom_idle_w", 100)
                     .putInt("geom_idle_h", 100)
                     .apply();
