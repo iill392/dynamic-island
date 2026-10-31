@@ -78,6 +78,29 @@ adb install -r E:\voice\dist\灵动岛-debug.apk
 3. **窗口尺寸小优化**：展开态悬浮窗宽度由 1.156 屏宽钳制到 1 屏宽（卡片 0.98W 仍完整可见，超屏过冲本来就被屏幕裁掉），减少无谓的 surface 与触摸区域。
 4. **版本**：versionCode 5 / versionName 3.2（`dist/灵动岛-debug.apk`）。
 
+## v8.77 更新（代码检查与修复，2026-10-31）
+
+运行完整 `lintDebug` 检查，修复发现的问题：
+
+1. **Onboarding 语言选择 RadioButton 使用硬编码 ID（201/202）**
+   - lint `ResourceType` 错误；
+   - 改为 `View.generateViewId()`，保存局部 ID 后再 `check()` / 比较。
+2. **Manifest 缺少 tools 命名空间**
+   - `QUERY_ALL_PACKAGES` 是应用解析通知应用图标/名称的必需权限；
+   - 加 `xmlns:tools` 与 `tools:ignore="QueryAllPackagesPermission"`，lint 可通过。
+3. **BootReceiver 未校验广播 action**
+   - 加 `ACTION_BOOT_COMPLETED` / `ACTION_MY_PACKAGE_REPLACED` 校验，避免伪造广播。
+4. **音乐长按回调在 View 已 detach 后仍可能触发**
+   - `onDetachedFromWindow()` 中移除长按 Runnable 并重置状态。
+5. **无障碍/触摸可达性**
+   - 增加 `performClick()`，普通点击时调用，消除 ClickableViewAccessibility 警告。
+
+检查结果：
+
+- `:app:assembleDebug` ✅
+- `:app:lintDebug` ✅ 无 Error（仍有 45 条非阻断 Warning，如电池优化政策、私有 PowerProfile 反射、targetSdk 提示等）
+
+版本：versionCode 124 / versionName 8.77，正式签名包 `dist/游龙灵动岛-v8.77-签名版.apk`。
 ## v8.76 更新（删除通用页重复服务/预览按钮，2026-10-31）
 
 首页已经有灵动岛总开关，通用页里的重复入口全部删除：
@@ -1576,6 +1599,7 @@ v5.3 的 k=110 手感偏慢，用户要求加快一点：
 - 未连接真机做最终手感调校；所有参数可按 `app/README.md` 的说明在 `IslandSpec.java` 一处微调。
 - 计时器依赖系统时钟 App 的通知格式（已做通用识别 + 关键字/包名/chronometer 多路判断），个别 ROM 可能需要补充包名。
 - 展开音乐卡片的五个按钮按录屏复原；其中上一首/暂停/下一首已接 MediaController 真实控制。
+
 
 
 

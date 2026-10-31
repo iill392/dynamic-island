@@ -109,19 +109,21 @@ public class OnboardingActivity extends Activity {
 
         RadioGroup group = new RadioGroup(this);
         RadioButton zh = new RadioButton(this);
-        zh.setId(201);
+        int zhId = View.generateViewId();
+        int enId = View.generateViewId();
+        zh.setId(zhId);
         zh.setText("简体中文");
         zh.setTextSize(16);
         zh.setTextColor(0xFF1F1F24);
         group.addView(zh);
         RadioButton en = new RadioButton(this);
-        en.setId(202);
+        en.setId(enId);
         en.setText("English");
         en.setTextSize(16);
         en.setTextColor(0xFF1F1F24);
         group.addView(en);
-        group.check("en".equals(language) ? 202 : 201);
-        group.setOnCheckedChangeListener((g, id) -> language = id == 202 ? "en" : "zh");
+        group.check("en".equals(language) ? enId : zhId);
+        group.setOnCheckedChangeListener((g, id) -> language = id == enId ? "en" : "zh");
         content.addView(group);
 
         Button next = primaryButton("下一步 / Next", v -> {

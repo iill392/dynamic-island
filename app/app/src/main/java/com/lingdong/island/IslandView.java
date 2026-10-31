@@ -1241,6 +1241,8 @@ public class IslandView extends View {
 
     @Override protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
+        removeCallbacks(musicLongPressRunnable);
+        musicLongPressTriggered = false;
         if (choreographer != null) choreographer.removeFrameCallback(frameCallback);
         removeCallbacks(slowRefreshTask);
         clearMotionBlur();
@@ -1333,6 +1335,11 @@ public class IslandView extends View {
         pressActive = false;
         pressS.setTarget(0f);
         kick();
+    }
+
+    @Override public boolean performClick() {
+        super.performClick();
+        return true;
     }
 
     @Override public boolean onTouchEvent(MotionEvent e) {
@@ -1439,6 +1446,7 @@ public class IslandView extends View {
             if (!inside) return true;
             float xf = cardW > 0 ? Math.max(0f, Math.min(1f, (e.getX() - left) / cardW)) : 0.5f;
             float yf = cardH > 0 ? Math.max(0f, Math.min(1f, (e.getY() - top) / cardH)) : 0.5f;
+            performClick();
             if (callback != null) callback.onIslandTap(xf, yf);
             return true;
         }
