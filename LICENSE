@@ -1,0 +1,81 @@
+# 游龙灵动岛源代码公开许可协议 v1.0
+
+Copyright (c) 2026 iill392 / 游龙灵动岛项目
+项目地址：https://github.com/iill392/dynamic-island
+
+本协议适用于本仓库中的全部源代码、资源文件、文档及其修改版本（以下统称“本项目”）。
+任何个人或组织使用、复制、修改、合并、发布、分发本项目，即视为已阅读并同意本协议。
+
+## 1. 授权范围
+
+在遵守本协议全部条款的前提下，特此授予你一项非独占、不可转让的许可：
+
+1. 学习、研究、测试本项目；
+2. 复制、修改本项目源代码；
+3. 将修改后的源代码或衍生作品以非商业方式分发。
+
+## 2. 强制附加条款
+
+如果你在自研软件、衍生软件、商业项目或任何分发产品中使用了本项目源代码的全部或任何实质性部分，则必须同时满足以下全部条件：
+
+1. **必须保持完全纯净、无广告**
+   - 不得集成任何广告 SDK、广告位、推广链接、返利链接、信息流广告、开屏广告或其他形式的广告；
+   - 不得通过弹窗、通知、推荐位等方式进行商业推广。
+
+2. **必须完全免费**
+   - 不得以任何形式向用户收费，包括但不限于付费下载、订阅、内购、功能解锁费、会员费、服务费、授权费；
+   - 不得设置“付费才能使用”“看广告才能使用”“捐赠才能解锁功能”等限制。
+
+3. **禁止上架任何应用商店**
+   - 不得将包含本项目源代码或其衍生代码的软件上架、提交、分发至任何应用商店或软件市场，包括但不限于 Google Play、Apple App Store、华为应用市场、小米应用商店、OPPO/vivo 应用商店、腾讯应用宝、三星应用商店、Amazon Appstore、F-Droid 或其他第三方应用市场；
+   - 仅允许通过项目仓库、直接 APK 下载等非商店渠道分发，且分发版本仍必须遵守本协议第 2.1、2.2 条。
+
+4. **保留声明**
+   - 必须在源代码、文档及分发页面中保留本协议和原始版权声明；
+   - 不得删除、隐藏或修改本协议中的限制条款。
+
+5. **衍生作品使用同一协议**
+   - 任何基于本项目的修改版、衍生版及其源代码，必须继续使用本协议，不得改为更宽松的许可证。
+
+## 3. 使用范围定义
+
+“使用本项目源代码”包括但不限于：
+
+- 复制全部或部分源代码；
+- 修改后用于自己的 App；
+- 将本项目作为模板、组件库、二次开发基础；
+- 将编译后的 APK 或衍生 App 对外分发。
+
+## 4. 违约与终止
+
+1. 一旦违反本协议任何条款，授权立即自动终止；
+2. 终止后必须立即停止使用、复制、分发本项目，并删除所有副本及衍生版本；
+3. 项目作者保留追究违约责任及要求赔偿的权利。
+
+## 5. 免责声明
+
+本项目按“现状”提供，不附带任何明示或暗示的担保，包括但不限于适销性、特定用途适用性和不侵权担保。
+因使用本项目产生的任何直接或间接损失，项目作者不承担责任。
+
+## 6. 其他
+
+1. 本协议未尽事宜，以项目作者后续发布的更新版本为准；
+2. 本协议任何条款被认定无效或不可执行，不影响其余条款的效力；
+3. 本项目名称、图标及相关品牌标识归项目作者所有，未经书面许可不得用于商业宣传。
+
+---
+
+# YouLong Dynamic Island Source-Available License v1.0
+
+Copyright (c) 2026 iill392 / YouLong Dynamic Island
+Repository: https://github.com/iill392/dynamic-island
+
+If you use this source code, in whole or in substantial part, in any software, you must comply with all of the following:
+
+1. **No advertising.** The entire software must contain no ad SDKs, ad placements, sponsored content, affiliate links, or commercial promotion of any kind.
+2. **No charges.** The entire software must be completely free. No paid downloads, subscriptions, in-app purchases, feature unlocks, membership fees, or donation-gated features.
+3. **No app-store distribution.** The software must not be submitted to or distributed through any app store or marketplace, including Google Play, Apple App Store, Huawei AppGallery, Xiaomi GetApps, OPPO/vivo stores, Tencent MyApp, Samsung Galaxy Store, Amazon Appstore, F-Droid, or any other store. Non-store distribution is allowed only if it remains free and ad-free.
+4. **Keep notices.** Retain this license and the original copyright notice in source, documentation, and distribution pages.
+5. **Same license for derivatives.** Any modified or derivative work must remain under this license.
+
+Violation terminates the license immediately. The software is provided "AS IS", without warranty of any kind. The authors are not liable for any damages arising from its use.
