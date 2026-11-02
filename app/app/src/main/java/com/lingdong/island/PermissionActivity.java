@@ -126,7 +126,7 @@ public class PermissionActivity extends Activity {
         boolean runtimeNotif = Build.VERSION.SDK_INT < 33
                 || checkSelfPermission("android.permission.POST_NOTIFICATIONS")
                         == android.content.pm.PackageManager.PERMISSION_GRANTED;
-        boolean battery = isIgnoringBatteryOptimizations();
+        boolean battery = isBatteryOptimizationConfirmed();
 
         int requiredDone = (overlay ? 1 : 0) + (a11y ? 1 : 0)
                 + (notificationAccess ? 1 : 0) + (runtimeNotif ? 1 : 0)
@@ -145,6 +145,31 @@ public class PermissionActivity extends Activity {
         addRow("通知权限（必需）", runtimeNotif, this::requestNotificationPermission);
         addRow("无障碍权限（必须开启）", a11y, this::openAccessibility);
         addRow("忽略电池优化（必须开启）", battery, this::openBatteryOptimization);
+        if (!battery) {
+            Button manualBattery = new Button(this);
+            manualBattery.setAllCaps(false);
+            manualBattery.setTextSize(13);
+            manualBattery.setText("我已授权完成");
+            manualBattery.setTextColor(0xFF2563EB);
+            GradientDrawable bg = new GradientDrawable();
+            bg.setColor(0xFFEFF4FF);
+            bg.setCornerRadius(dp(12));
+            bg.setStroke(dp(1), 0xFFCFE0FF);
+            manualBattery.setBackground(bg);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, dp(42));
+            lp.topMargin = dp(-2);
+            lp.bottomMargin = dp(8);
+            manualBattery.setLayoutParams(lp);
+            manualBattery.setOnClickListener(v -> {
+                getSharedPreferences("island", MODE_PRIVATE)
+                        .edit().putBoolean("battery_manual_confirmed", true).apply();
+                android.widget.Toast.makeText(this, "已记录：电池优化权限已授权",
+                        android.widget.Toast.LENGTH_SHORT).show();
+                populate();
+            });
+            content.addView(manualBattery);
+        }
     }
 
     private void addRow(String title, boolean granted, Runnable action) {
@@ -218,7 +243,13 @@ public class PermissionActivity extends Activity {
                 && (Build.VERSION.SDK_INT < 33
                     || checkSelfPermission("android.permission.POST_NOTIFICATIONS")
                             == android.content.pm.PackageManager.PERMISSION_GRANTED)
-                && isIgnoringBatteryOptimizations();
+                && isBatteryOptimizationConfirmed();
+    }
+
+    private boolean isBatteryOptimizationConfirmed() {
+        return isIgnoringBatteryOptimizations()
+                || getSharedPreferences("island", MODE_PRIVATE)
+                        .getBoolean("battery_manual_confirmed", false);
     }
 
     private boolean isIgnoringBatteryOptimizations() {        try {

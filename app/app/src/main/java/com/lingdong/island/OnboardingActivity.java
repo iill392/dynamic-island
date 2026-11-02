@@ -151,7 +151,7 @@ public class OnboardingActivity extends Activity {
         boolean runtime = Build.VERSION.SDK_INT < 33
                 || checkSelfPermission("android.permission.POST_NOTIFICATIONS")
                         == android.content.pm.PackageManager.PERMISSION_GRANTED;
-        boolean battery = isIgnoringBatteryOptimizations();
+        boolean battery = isBatteryOptimizationConfirmed();
         int done = (overlay ? 1 : 0) + (a11y ? 1 : 0) + (notif ? 1 : 0)
                 + (runtime ? 1 : 0) + (battery ? 1 : 0);
         permissionSummary.setText(en
@@ -169,6 +169,31 @@ public class OnboardingActivity extends Activity {
                 a11y, this::openAccessibility);
         addPermissionRow(en ? "Ignore battery optimization (required)" : "忽略电池优化（必须开启）",
                 battery, this::openBatteryOptimization);
+        if (!battery) {
+            Button manualBattery = new Button(this);
+            manualBattery.setAllCaps(false);
+            manualBattery.setTextSize(13);
+            manualBattery.setText(en ? "I have granted it" : "我已授权完成");
+            manualBattery.setTextColor(0xFF2563EB);
+            GradientDrawable manualBg = new GradientDrawable();
+            manualBg.setColor(0xFFEFF4FF);
+            manualBg.setCornerRadius(dp(12));
+            manualBg.setStroke(dp(1), 0xFFCFE0FF);
+            manualBattery.setBackground(manualBg);
+            LinearLayout.LayoutParams mlp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, dp(42));
+            mlp.topMargin = dp(-2);
+            mlp.bottomMargin = dp(8);
+            manualBattery.setLayoutParams(mlp);
+            manualBattery.setOnClickListener(v -> {
+                prefs.edit().putBoolean("battery_manual_confirmed", true).apply();
+                android.widget.Toast.makeText(this,
+                        en ? "Battery permission confirmed" : "已记录：电池优化权限已授权",
+                        android.widget.Toast.LENGTH_SHORT).show();
+                showPermissions();
+            });
+            content.addView(manualBattery);
+        }
 
         LinearLayout nav = new LinearLayout(this);
         nav.setOrientation(LinearLayout.HORIZONTAL);
@@ -190,7 +215,7 @@ public class OnboardingActivity extends Activity {
             boolean okRuntime = Build.VERSION.SDK_INT < 33
                     || checkSelfPermission("android.permission.POST_NOTIFICATIONS")
                             == android.content.pm.PackageManager.PERMISSION_GRANTED;
-            boolean okBattery = isIgnoringBatteryOptimizations();
+            boolean okBattery = isBatteryOptimizationConfirmed();
             if (!okOverlay || !okA11y || !okNotif || !okRuntime || !okBattery) {
                 android.widget.Toast.makeText(OnboardingActivity.this,
                         en ? "Grant all required permissions first"
@@ -352,6 +377,11 @@ public class OnboardingActivity extends Activity {
         } catch (Exception e) {
             openSettings(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
         }
+    }
+
+    private boolean isBatteryOptimizationConfirmed() {
+        return isIgnoringBatteryOptimizations()
+                || prefs.getBoolean("battery_manual_confirmed", false);
     }
 
     private boolean isIgnoringBatteryOptimizations() {

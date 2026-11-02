@@ -215,8 +215,13 @@ public class MainActivity extends Activity {
         boolean runtime = Build.VERSION.SDK_INT < 33
                 || checkSelfPermission("android.permission.POST_NOTIFICATIONS")
                         == PackageManager.PERMISSION_GRANTED;
-        boolean battery = isIgnoringBatteryOptimizations();
+        boolean battery = isBatteryOptimizationConfirmed();
         return overlay && accessibility && notif && runtime && battery;
+    }
+
+    private boolean isBatteryOptimizationConfirmed() {
+        return isIgnoringBatteryOptimizations()
+                || prefs.getBoolean("battery_manual_confirmed", false);
     }
 
     private boolean isIgnoringBatteryOptimizations() {
@@ -506,7 +511,7 @@ public class MainActivity extends Activity {
             if (Build.VERSION.SDK_INT < 33
                     || checkSelfPermission("android.permission.POST_NOTIFICATIONS")
                             == PackageManager.PERMISSION_GRANTED) done++;
-            if (isIgnoringBatteryOptimizations()) done++;
+            if (isBatteryOptimizationConfirmed()) done++;
             permissionRowSub.setText(done + "/5 已授权"
                     + (done >= 5 ? " · 已完成" : " · 点击逐项授权"));
             permissionRowSub.setTextColor(done >= 5 ? 0xFF2E9E5B : 0xFF7A7A84);

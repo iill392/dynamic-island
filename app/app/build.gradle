@@ -10,8 +10,8 @@ android {
         applicationId "com.lingdong.island"
         minSdk 28
         targetSdk 35
-        versionCode 131
-        versionName "8.87"
+        versionCode 132
+        versionName "8.88"
     }
 
     buildTypes {
