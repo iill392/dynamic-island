@@ -39,6 +39,7 @@ public class IslandNotificationListener extends NotificationListenerService {
     private static volatile boolean sEverConnected;
     private static volatile long sLastRebindRequestMs;
     private static volatile long sLastProbeMs;
+    private static volatile long sLastProactiveRebindMs;
 
     @Override public void onCreate() {
         super.onCreate();
@@ -56,27 +57,74 @@ public class IslandNotificationListener extends NotificationListenerService {
     }
 
     /**
-     * v8.82: recover from a notification-listener binder that died without delivering a new
-     * onListenerConnected callback. This is why users previously had to toggle notification
-     * access off/on before notifications appeared again.
+     * v8.89: self-healing notification channel.
+     *
+     * Some ROMs keep the notification-listener binder alive (so getActiveNotifications() still
+     * works) while silently stopping onNotificationPosted callbacks. Restarting the island service
+     * does not help; only rebinding the listener fixes it. Every few seconds we reconcile the
+     * system's active notifications with our in-memory cache: an active notification we never
+     * received is posted manually, and the listener is rebound so future callbacks resume.
+     * A proactive rebind every 10 minutes also prevents long-running sessions from going stale.
      */
     static void ensureBound(Context context) {
-        if (isConnected()) {
-            // Lightweight liveness probe at most once every 2 minutes. We do NOT invalidate or
-            // replay state on failure any more: reconnect silently, so a transient Huawei binder
-            // failure cannot make the island disappear/reappear.
-            long now = android.os.SystemClock.elapsedRealtime();
-            if (now - sLastProbeMs < 120_000L) return;
-            sLastProbeMs = now;
-            try {
-                IslandNotificationListener inst = sInstance;
-                if (inst != null) inst.getActiveNotifications();
-            } catch (Throwable t) {
-                Log.w(TAG, "notification-listener probe failed; rebinding silently", t);
-                sConnected = false;
-            }
-            if (isConnected()) return;
+        if (!isConnected()) {
+            requestSilentRebind(context);
+            return;
         }
+        long now = android.os.SystemClock.elapsedRealtime();
+        if (now - sLastProbeMs < 5_000L) return;
+        sLastProbeMs = now;
+        IslandNotificationListener inst = sInstance;
+        if (inst == null) {
+            sConnected = false;
+            requestSilentRebind(context);
+            return;
+        }
+        StatusBarNotification[] active;
+        try {
+            active = inst.getActiveNotifications();
+        } catch (Throwable t) {
+            Log.w(TAG, "notification-listener query failed; rebinding silently", t);
+            sConnected = false;
+            requestSilentRebind(context);
+            return;
+        }
+        if (active != null) {
+            List<StatusBarNotification> missed = new ArrayList<>();
+            synchronized (CACHE) {
+                for (StatusBarNotification sbn : active) {
+                    if (sbn == null || sbn.getKey() == null) continue;
+                    boolean known = false;
+                    for (StatusBarNotification cached : CACHE) {
+                        if (sameKey(cached, sbn)) { known = true; break; }
+                    }
+                    if (!known) {
+                        CACHE.add(sbn);
+                        missed.add(sbn);
+                    }
+                }
+                while (CACHE.size() > CACHE_MAX) CACHE.remove(0);
+            }
+            if (!missed.isEmpty()) {
+                Log.w(TAG, "notification callbacks stale; recovered " + missed.size()
+                        + " active notification(s)");
+                for (StatusBarNotification sbn : missed) {
+                    if (IslandService.isRunning()) IslandBus.post(sbn);
+                }
+                sConnected = false;
+                requestSilentRebind(context);
+                return;
+            }
+        }
+        if (now - sLastProactiveRebindMs >= 10L * 60L * 1000L) {
+            sLastProactiveRebindMs = now;
+            Log.i(TAG, "proactive notification-listener rebind");
+            sConnected = false;
+            requestSilentRebind(context);
+        }
+    }
+
+    private static void requestSilentRebind(Context context) {
         NotificationManager nm =
                 (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         try {
@@ -146,6 +194,7 @@ public class IslandNotificationListener extends NotificationListenerService {
         sEverConnected = true;
         sConnected = true;
         rebindAttempts = 0;
+        sLastProactiveRebindMs = android.os.SystemClock.elapsedRealtime();
         try {
             StatusBarNotification[] active = getActiveNotifications();
             if (active != null) {
