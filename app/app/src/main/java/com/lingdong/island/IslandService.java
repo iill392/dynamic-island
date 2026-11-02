@@ -405,7 +405,7 @@ public class IslandService extends Service implements IslandBus.NotificationSink
         // only notifications that arrive after this point are allowed to pop on the island.
         serviceStartWallMs = System.currentTimeMillis();
         IslandBus.register(this);
-        IslandNotificationListener.ensureBound(this);
+        IslandNotificationListener.forceRebind(this);
         setupMediaSessions();
         handler.post(ticker);
         // v6.0: when always-on was enabled before the service starts, show the idle capsule now

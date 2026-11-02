@@ -124,8 +124,18 @@ public class IslandNotificationListener extends NotificationListenerService {
         }
     }
 
-    private static void requestSilentRebind(Context context) {
-        NotificationManager nm =
+    /**
+     * v8.89: a service (re)start must not reuse a possibly stale notification-listener callback
+     * channel. Toggling notification access has always fixed the issue, so do the equivalent
+     * rebind here once, without clearing any visible island state.
+     */
+    static void forceRebind(Context context) {
+        sConnected = false;
+        sLastRebindRequestMs = 0L;
+        requestSilentRebind(context);
+    }
+
+    private static void requestSilentRebind(Context context) {        NotificationManager nm =
                 (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         try {
             if (nm != null && !nm.isNotificationListenerAccessGranted(
