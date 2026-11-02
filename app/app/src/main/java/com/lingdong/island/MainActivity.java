@@ -83,14 +83,8 @@ public class MainActivity extends Activity {
         title.setTextColor(0xFF111114);
         title.setTypeface(android.graphics.Typeface.create(
                 "sans-serif-medium", android.graphics.Typeface.BOLD));
+        title.setPadding(0, 0, 0, dp(14));
         root.addView(title);
-
-        TextView sub = new TextView(this);
-        sub.setText("bata【严禁外传】");
-        sub.setTextSize(13);
-        sub.setTextColor(0xFF8A8A93);
-        sub.setPadding(0, dp(5), 0, dp(18));
-        root.addView(sub);
 
         LinearLayout menu = new LinearLayout(this);
         menu.setOrientation(LinearLayout.VERTICAL);

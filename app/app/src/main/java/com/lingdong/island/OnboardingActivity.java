@@ -68,14 +68,8 @@ public class OnboardingActivity extends Activity {
         title.setTextSize(28);
         title.setTextColor(0xFF111114);
         title.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        title.setPadding(0, 0, 0, dp(18));
         root.addView(title);
-
-        TextView sub = new TextView(this);
-        sub.setText("bata【严禁外传】");
-        sub.setTextSize(13);
-        sub.setTextColor(0xFF8A8A93);
-        sub.setPadding(0, dp(6), 0, dp(24));
-        root.addView(sub);
 
         content = new LinearLayout(this);
         content.setOrientation(LinearLayout.VERTICAL);
