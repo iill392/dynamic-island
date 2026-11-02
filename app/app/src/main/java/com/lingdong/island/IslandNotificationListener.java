@@ -36,6 +36,7 @@ public class IslandNotificationListener extends NotificationListenerService {
     private static volatile IslandNotificationListener sInstance;
     /** v8.82: connection state + throttled watchdog rebind. */
     private static volatile boolean sConnected;
+    private static volatile boolean sEverConnected;
     private static volatile long sLastRebindRequestMs;
     private static volatile long sLastProbeMs;
 
@@ -61,17 +62,17 @@ public class IslandNotificationListener extends NotificationListenerService {
      */
     static void ensureBound(Context context) {
         if (isConnected()) {
-            // v8.82: periodically prove the binder is still alive. Some ROMs drop the listener
-            // binder without invoking onListenerDisconnected; toggling notification access was
-            // previously the only workaround.
+            // Lightweight liveness probe at most once every 2 minutes. We do NOT invalidate or
+            // replay state on failure any more: reconnect silently, so a transient Huawei binder
+            // failure cannot make the island disappear/reappear.
             long now = android.os.SystemClock.elapsedRealtime();
-            if (now - sLastProbeMs < 30_000L) return;
+            if (now - sLastProbeMs < 120_000L) return;
             sLastProbeMs = now;
             try {
                 IslandNotificationListener inst = sInstance;
                 if (inst != null) inst.getActiveNotifications();
             } catch (Throwable t) {
-                Log.w(TAG, "notification-listener binder probe failed; rebinding", t);
+                Log.w(TAG, "notification-listener probe failed; rebinding silently", t);
                 sConnected = false;
             }
             if (isConnected()) return;
@@ -141,14 +142,22 @@ public class IslandNotificationListener extends NotificationListenerService {
 
     @Override public void onListenerConnected() {
         super.onListenerConnected();
+        boolean firstConnection = !sEverConnected;
+        sEverConnected = true;
         sConnected = true;
         rebindAttempts = 0;
         try {
             StatusBarNotification[] active = getActiveNotifications();
             if (active != null) {
+                synchronized (CACHE) {
+                    CACHE.clear();
+                }
                 for (StatusBarNotification sbn : active) {
                     remember(sbn);
-                    IslandBus.post(sbn);
+                    // First connection: replay so active notifications are not missed. On a later
+                    // reconnect keep the existing card untouched — replaying here caused the
+                    // Huawei hide/show jump.
+                    if (!IslandService.isRunning() || firstConnection) IslandBus.post(sbn);
                 }
             }
         } catch (Exception e) {
@@ -162,13 +171,15 @@ public class IslandNotificationListener extends NotificationListenerService {
     @Override public void onListenerDisconnected() {
         super.onListenerDisconnected();
         sConnected = false;
-        // S9: while disconnected we cannot observe removals, so replaying the old cache after the
-        // rebind would resurrect a timer that the user already dismissed. Start from a clean slate;
-        // onListenerConnected() re-reads the notifications that still exist.
-        synchronized (CACHE) {
-            CACHE.clear();
+        // Keep the current notification/media UI alive across a transient reconnect. Clearing it
+        // here caused the island to disappear and re-expand (the "under-camera jumping" on Huawei).
+        // If the user actually revoked notification access, clear stale state once.
+        if (!isAccessGranted()) {
+            synchronized (CACHE) {
+                CACHE.clear();
+            }
+            IslandBus.invalidate();
         }
-        IslandBus.invalidate();
         rebindAttempts = 0;
         requestRebindIfAllowed();
     }

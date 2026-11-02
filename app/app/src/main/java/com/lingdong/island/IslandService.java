@@ -87,6 +87,9 @@ public class IslandService extends Service implements IslandBus.NotificationSink
 
     /** Window-top retries: the first one often runs before the first layout / before the ROM settles. */
     private static final long[] POSITION_RETRY_DELAYS_MS = {0L, 120L, 400L};
+    /** v8.87: Huawei/Honor overlay windows are re-clamped around the camera cutout; repeated
+     * y-correction fights the ROM and makes the island visibly jump. Leave placement to EMUI. */
+    private boolean skipPositionCorrection;
     /** Battery binder properties are polled at most once per second (tick keeps its 300 ms cadence). */
     private static final long BATTERY_POLL_INTERVAL_MS = 1000L;
     /** Tap tolerance for the expanded music card buttons: ~40 % of the ~0.197 spacing. */
@@ -370,6 +373,14 @@ public class IslandService extends Service implements IslandBus.NotificationSink
         foregroundFailed = false;
         colorExecutor = Executors.newSingleThreadExecutor(r -> new Thread(r, "island-accent"));
         IslandSpec.init(this);
+        String manufacturer = Build.MANUFACTURER == null ? ""
+                : Build.MANUFACTURER.toLowerCase(java.util.Locale.ROOT);
+        String brand = Build.BRAND == null ? ""
+                : Build.BRAND.toLowerCase(java.util.Locale.ROOT);
+        skipPositionCorrection = manufacturer.contains("huawei")
+                || manufacturer.contains("honor")
+                || brand.contains("huawei")
+                || brand.contains("honor");
         IslandSpec.USER_OFFSET_PX = getSharedPreferences("island", MODE_PRIVATE)
                 .getFloat("offset_dp", 0f) * IslandSpec.DENSITY;
         alwaysOn = getSharedPreferences("island", MODE_PRIVATE).getBoolean("always_on", false);
@@ -868,6 +879,7 @@ public class IslandService extends Service implements IslandBus.NotificationSink
      * push it down only after the window settles, so measure up to three times (0/120/400 ms).
      */
     private void schedulePositionCorrection() {
+        if (skipPositionCorrection) return;
         if (view == null) return;
         handler.removeCallbacks(positionCorrectionTask);
         positionRetryIndex = 0;
@@ -944,7 +956,6 @@ public class IslandService extends Service implements IslandBus.NotificationSink
         lp.width = targetW;
         lp.height = targetH;
         updateWindowLayout();
-        schedulePositionCorrection();
     }
 
     private void detachOverlay() {
